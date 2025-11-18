@@ -1,0 +1,22 @@
+{
+  "name": "Fitox Admin",
+  "short_name": "Fitox Admin",
+  "start_url": "/fitoxme/",
+  "display": "standalone",
+  "background_color": "#434242",
+  "theme_color": "#0f172a",
+  "scope": "/fitoxme/",
+
+  "icons": [
+    {
+      "src": "/fitoxme/fc-icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/fitoxme/fc-icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
