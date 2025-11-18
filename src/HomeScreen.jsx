@@ -101,17 +101,17 @@ const fetchTrainers = async (gymId,token) => {
     }
 };
     const tabs = [
-        { name: "Active Clients", gradient: "from-green-400 to-green-600" },
-        { name: "Admins/Batch", gradient: "from-orange-400 to-orange-600" },
-        { name: "Transaction History", gradient: "from-purple-400 to-purple-600" },
-        { name: "Dashboard", gradient: "from-red-400 to-red-600" },
-        { name: "Analytics", gradient: "from-blue-400 to-blue-600" },
-        { name: "Inactive Clients", gradient: "from-gray-800 to-gray-500" },
+        { name: "Bicep Curl", gradient: "from-green-400 to-green-600" },
+        { name: "Tricep Curl", gradient: "from-orange-400 to-orange-600" },
+        { name: "Squats", gradient: "from-purple-400 to-purple-600" },
+        { name: "Shoulder Press", gradient: "from-red-400 to-red-600" },
+        { name: "Lateral raises", gradient: "from-blue-400 to-blue-600" },
+        { name: "Front raises", gradient: "from-gray-800 to-gray-500" },
         { name: "Settings", gradient: "from-pink-800 to-pink-500" },
-        { name: "Leads", gradient: "from-yellow-800 to-yellow-500" },
-        { name: "Add Lead", gradient: "from-violet-800 to-violet-500" },
+        { name: "Push-ups", gradient: "from-yellow-800 to-yellow-500" },
+        { name: "Bent-over rows", gradient: "from-violet-800 to-violet-500" },
             //    { name: "Biometric", gradient: "from-blue-800 to-blue-500" },
-        { name: "My Hub", gradient: "from-blue-800 to-blue-500" },
+        { name: "Deadlifts", gradient: "from-blue-800 to-blue-500" },
 
 //{ name: "Upgrade", gradient: "from-[#FFD700] to-[#FFA500]" }
 
@@ -121,21 +121,21 @@ const fetchTrainers = async (gymId,token) => {
 const handleTabClick = (tabName) => {
         if (tabName === "Settings") {
             navigate("/settings");
-        } else if (tabName === "Active Clients"){
+        } else if (tabName === "Bicep Curl"){
             navigate("/activeClients");
-        }else if (tabName === "Admins/Batch"){
+        }else if (tabName === "Tricep Curl"){
             navigate("/trainer-list");
 
        
-        }else if (tabName === "Transaction History"){
+        }else if (tabName === "Squats"){
             navigate("/transac-hist");
 
         
-        } else if (tabName === "Dashboard"){
+        } else if (tabName === "Shoulder Press"){
             navigate("/dash-admin");
 
         
-        }else if (tabName === "Analytics"){
+        }else if (tabName === "Lateral raises"){
             navigate("/analytics-screen");
 
         
@@ -143,12 +143,12 @@ const handleTabClick = (tabName) => {
             navigate("/bio-dash");
 
         
-        }else if (tabName === "My Hub"){
+        }else if (tabName === "Deadlifts"){
          
             navigate("/fitox-hub");
 
         
-        }else if (tabName === "Inactive Clients"){
+        }else if (tabName === "Front raises"){
              const storedGym = localStorage.getItem("selectedGym");
         const parsedGym = JSON.parse(storedGym);
 navigate("/inactive-screen");
@@ -161,11 +161,11 @@ navigate("/inactive-screen");
 //     navigate("/inactive-screen");
 // }
         
-        }else if (tabName === "Leads"){
+        }else if (tabName === "Push-ups"){
             navigate("/lead_data");
 
         
-        }else if (tabName === "Add Lead"){
+        }else if (tabName === "Bent-over rows"){
    const storedGym = localStorage.getItem("selectedGym");
  if (storedGym) {
         const parsedGym = JSON.parse(storedGym);
@@ -261,42 +261,42 @@ navigate("/inactive-screen");
     onClick={() => handleTabClick(tab.name)}
   >
     {/* Show image above Active Clients */}
-    {tab.name === "Active Clients" && (
+    {tab.name === "Bicep Curl" && (
       <img
         src={clientIcon}
         alt="Client Icon"
         className="w-12 h-12 filter brightness-0 invert" // white tint
       />
     )}
- {tab.name === "Admins/Batch" && (
+ {tab.name === "Tricep Curl" && (
       <img
         src={adminIcon}
         alt="Client Icon"
         className="w-12 h-12 filter brightness-0 invert" // white tint
       />
     )}
-     {tab.name === "Transaction History" && (
+     {tab.name === "Squats" && (
       <img
         src={transacIcon}
         alt="Client Icon"
         className="w-12 h-12 filter brightness-0 invert" // white tint
       />
     )}
-    {tab.name === "Dashboard" && (
+    {tab.name === "Shoulder Press" && (
       <img
         src={dashIcon}
         alt="Client Icon"
         className="w-12 h-12 filter brightness-0 invert" // white tint
       />
     )}
-        {tab.name === "Analytics" && (
+        {tab.name === "Lateral raises" && (
       <img
         src={anaIcon}
         alt="Client Icon"
         className="w-12 h-12 filter brightness-0 invert" // white tint
       />
     )}
-       {tab.name === "Inactive Clients" && (
+       {tab.name === "Front raises" && (
       <img
         src={inactiveIcon}
         alt="Client Icon"
@@ -310,21 +310,21 @@ navigate("/inactive-screen");
         className="w-12 h-12 filter brightness-0 invert" // white tint
       />
     )}
-    {tab.name === "Leads" && (
+    {tab.name === "Push-ups" && (
       <img
         src={leadIcon}
         alt="Client Icon"
         className="w-12 h-12 filter brightness-0 invert" // white tint
       />
     )}
-      {tab.name === "Add Lead" && (
+      {tab.name === "Bent-over rows" && (
       <img
         src={addleadIcon}
         alt="Client Icon"
         className="w-12 h-12 filter brightness-0 invert" // white tint
       />
     )}
-     {tab.name === "My Hub" && (
+     {tab.name === "Deadlifts" && (
       <img
         src={hubIcon}
         alt="Hub Icon"
@@ -335,7 +335,7 @@ navigate("/inactive-screen");
     <div className="flex items-center gap-2">
       <span>{tab.name}</span>
 
-      {tab.name === "Active Clients" && (
+      {/* {tab.name === "Bicep Curl" && (
         <div className="relative group">
           <div
             onClick={(e) => {
@@ -350,7 +350,7 @@ navigate("/inactive-screen");
             Add Member
           </span>
         </div>
-      )}
+      )} */}
     </div>
   </div>
 ))}

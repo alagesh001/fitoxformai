@@ -16,6 +16,7 @@ import PoseCorrect from "./PoseCorrector";
 
 import BicepCurlFormCorrector from "./BicepForm";
 import TricepCurlFormCorrector from "./tricepForm";
+import SquatFormCorrector from "./Squatform";
 
 
 function App() {
@@ -51,7 +52,7 @@ function App() {
                 <Route path="/activeClients" element={<BicepCurlFormCorrector />} />
         <Route path="/add-member" element={<BicepCurlFormCorrector />} />
         <Route path="/trainer-list" element={<TricepCurlFormCorrector />} />
-        <Route path="/transac-hist" element={<BicepCurlFormCorrector />} />
+        <Route path="/transac-hist" element={<SquatFormCorrector />} />
         <Route path="/dash-admin" element={<BicepCurlFormCorrector />} />
         <Route path="/analytics-screen" element={<BicepCurlFormCorrector />} />
         <Route path="/inactive-screen" element={<BicepCurlFormCorrector />} />

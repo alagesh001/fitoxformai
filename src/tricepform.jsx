@@ -360,7 +360,7 @@ function drawLandmarks(ctx, results) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-4 flex flex-col items-center">
       <div className="w-full max-w-4xl bg-slate-700/30 rounded-2xl p-4 shadow-lg">
-        <h2 className="text-2xl font-semibold mb-2">Bicep Curl Form Corrector</h2>
+        <h2 className="text-2xl font-semibold mb-2">Tricep Curl Form Corrector</h2>
         <p className="text-sm text-slate-200/80 mb-4">Choose camera, get live form feedback and rep counting using MediaPipe Pose.</p>
 
         <div className="flex gap-3 mb-4">
