@@ -108,7 +108,8 @@ function drawLandmarks(ctx, results) {
 
   // No mirroring (we want true orientation)
   ctx.globalAlpha = 0.85;
-
+  ctx.scale(-1, 1);
+  ctx.translate(-ctx.canvas.width, 0);
   const drawLine = (a, b, color = "rgba(0,255,0,0.8)") => {
     ctx.beginPath();
     ctx.moveTo(a.x * ctx.canvas.width, a.y * ctx.canvas.height);

@@ -14,9 +14,10 @@ import GymRegistration from "./NewRegisterscreen";
 
 import PoseCorrect from "./PoseCorrector";
 
-import BicepCurlFormCorrector from "./BicepForm";
-import TricepCurlFormCorrector from "./tricepForm";
-import SquatFormCorrector from "./Squatform";
+import BicepCurlFormCorrector from "./pages/BicepForm";
+import TricepCurlFormCorrector from "./pages/tricepForm";
+import SquatFormCorrector from "./pages/Squatform";
+import ShoulderPressCorrector from "./pages/Shoulderpress";
 
 
 function App() {
@@ -53,7 +54,7 @@ function App() {
         <Route path="/add-member" element={<BicepCurlFormCorrector />} />
         <Route path="/trainer-list" element={<TricepCurlFormCorrector />} />
         <Route path="/transac-hist" element={<SquatFormCorrector />} />
-        <Route path="/dash-admin" element={<BicepCurlFormCorrector />} />
+        <Route path="/dash-admin" element={<ShoulderPressCorrector />} />
         <Route path="/analytics-screen" element={<BicepCurlFormCorrector />} />
         <Route path="/inactive-screen" element={<BicepCurlFormCorrector />} />
         <Route path="/register-screen" element={<GymRegistration />} />
