@@ -533,8 +533,7 @@ if ( isDown) {
       <div className="text-center flex flex-col">
         <p className="text-lg font-bold">{stage}</p>
         <p className="text-xs opacity-80">
-          {lastElbowAngle}
-          {/* {lastElbowAngle ? Math.round(lastElbowAngle) + "°" : "—"} */}
+          {lastElbowAngle ? Math.round(lastElbowAngle) + "°" : "—"}
         </p>
       </div>
 <div className="absolute mt-30 left-0 w-full flex justify-center">

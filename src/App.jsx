@@ -19,6 +19,7 @@ import TricepCurlFormCorrector from "./pages/tricepForm";
 import SquatFormCorrector from "./pages/Squatform";
 import ShoulderPressCorrector from "./pages/Shoulderpress";
 
+import LateralRiseFormCorrector from "./pages/Lateralrise";
 
 function App() {
   // Helper function to check standalone mode
@@ -55,7 +56,7 @@ function App() {
         <Route path="/trainer-list" element={<TricepCurlFormCorrector />} />
         <Route path="/transac-hist" element={<SquatFormCorrector />} />
         <Route path="/dash-admin" element={<ShoulderPressCorrector />} />
-        <Route path="/analytics-screen" element={<BicepCurlFormCorrector />} />
+        <Route path="/analytics-screen" element={<LateralRiseFormCorrector />} />
         <Route path="/inactive-screen" element={<BicepCurlFormCorrector />} />
         <Route path="/register-screen" element={<GymRegistration />} />
         <Route path="/enquire_now" element={<BicepCurlFormCorrector />} />
