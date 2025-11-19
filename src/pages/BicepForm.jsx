@@ -32,6 +32,7 @@ export default function BicepCurlFormCorrector() {
   const [lastElbowAngle, setLastElbowAngle] = useState(null);
   const [armSide, setArmSide] = useState("right"); // 'left' or 'right' - autopreview
 
+  const [formWrong, setformWrong] = useState(false); // 'left' or 'right' - autopreview
 
 
   const elbowAngleRef = useRef(40);
@@ -106,68 +107,77 @@ function drawLandmarks(ctx, results) {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.save();
 
-  ctx.globalAlpha = 0.85;
-
-  // ⭐ MIRROR CANVAS (Flip horizontally)
+  // Mirror horizontally
+  ctx.translate(ctx.canvas.width, 0);
   ctx.scale(-1, 1);
-  ctx.translate(-ctx.canvas.width, 0);
 
-  const drawLine = (a, b, color = "rgba(0,255,0,0.8)") => {
-    ctx.beginPath();
-    ctx.moveTo(a.x * ctx.canvas.width, a.y * ctx.canvas.height);
-    ctx.lineTo(b.x * ctx.canvas.width, b.y * ctx.canvas.height);
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = color;
-    ctx.stroke();
-  };
-
-  const drawPoint = (p, r = 6, color = "rgba(255,0,0,0.9)") => {
-    ctx.beginPath();
-    ctx.arc(p.x * ctx.canvas.width, p.y * ctx.canvas.height, r, 0, 2 * Math.PI);
-    ctx.fillStyle = color;
-    ctx.fill();
-  };
+  ctx.globalAlpha = 0.9;
 
   const lm = results?.poseLandmarks;
-  if (!lm) {
+  if (!lm || lm.length < 33) {
     ctx.restore();
     return;
   }
 
-  const rightShoulder = lm[11];
-  const rightElbow = lm[13];
-  const rightWrist = lm[15];
-  const leftShoulder = lm[12];
-  const leftElbow = lm[14];
-  const leftWrist = lm[16];
+  const P = (i) => ({
+    x: lm[i].x * ctx.canvas.width,
+    y: lm[i].y * ctx.canvas.height
+  });
 
-  const rightVis = Math.min(
-    rightShoulder?.visibility ?? 0,
-    rightElbow?.visibility ?? 0,
-    rightWrist?.visibility ?? 0
-  );
-  const leftVis = Math.min(
-    leftShoulder?.visibility ?? 0,
-    leftElbow?.visibility ?? 0,
-    leftWrist?.visibility ?? 0
-  );
+  const drawLine = (a, b, color = "rgba(0,255,0,0.9)", width = 5) => {
+    const A = P(a);
+    const B = P(b);
 
-  // Detect dominant visible arm
-  const side = rightVis > leftVis ? "right" : "left";
-  setArmSide(side);
+    ctx.beginPath();
+    ctx.moveTo(A.x, A.y);
+    ctx.lineTo(B.x, B.y);
+    ctx.lineWidth = width;
+    ctx.strokeStyle = color;
+    ctx.stroke();
+  };
 
-  const shoulder = side === "right" ? rightShoulder : leftShoulder;
-  const elbow = side === "right" ? rightElbow : leftElbow;
-  const wrist = side === "right" ? rightWrist : leftWrist;
+  const drawPoint = (i, color = "rgba(255,255,255,0.95)", r = 6) => {
+    const p = P(i);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, 2 * Math.PI);
+    ctx.fillStyle = color;
+    ctx.fill();
+  };
 
-  if (shoulder && elbow && wrist) {
-    drawLine(shoulder, elbow);
-    drawLine(elbow, wrist);
+  // RIGHT SIDE LANDMARKS
+  const R = {
+    SHOULDER: 12,
+    ELBOW: 14,
+    WRIST: 16,
+    HIP: 24,
+    KNEE: 26,
+    ANKLE: 28
+  };
 
-    drawPoint(shoulder, 5);
-    drawPoint(elbow, 6);
-    drawPoint(wrist, 5);
-  }
+  // ================================
+  //     PUSH-UP SIDE VIEW LINES
+  // ================================
+
+  // Arm
+  drawLine(R.SHOULDER, R.ELBOW, "rgba(0,150,255,1)", 6);
+  drawLine(R.ELBOW, R.WRIST, "rgba(0,220,255,1)", 6);
+
+  // Torso
+  drawLine(R.SHOULDER, R.HIP, "rgba(255,200,0,1)", 7);
+
+  // Leg line
+  drawLine(R.HIP, R.KNEE, "rgba(0,255,100,1)", 6);
+  drawLine(R.KNEE, R.ANKLE, "rgba(0,255,100,1)", 6);
+
+  // Points (only important landmarks)
+  [
+    R.SHOULDER, 
+    R.ELBOW, 
+    R.WRIST, 
+    R.HIP, 
+    R.KNEE, 
+    R.ANKLE
+  ].forEach(i => drawPoint(i));
 
   ctx.restore();
 }
@@ -187,84 +197,129 @@ function drawLandmarks(ctx, results) {
     return (Math.acos(cosine) * 180) / Math.PI;
   }
 
-  function analyzeForm(results) {
-    const lm = results?.poseLandmarks;
-    if (!lm) return;
+ function analyzeForm(results) {
+  const lm = results?.poseLandmarks;
+  if (!lm) return;
 
-    const rightShoulder = lm[11];
-    const rightElbow = lm[13];
-    const rightWrist = lm[15];
-    const leftShoulder = lm[12];
-    const leftElbow = lm[14];
-    const leftWrist = lm[16];
+  // -----------------------------
+  // CHOOSE BEST VISIBLE SIDE
+  // -----------------------------
+  const R = { shoulder: lm[11], elbow: lm[13], wrist: lm[15], hip: lm[23] };
+  const L = { shoulder: lm[12], elbow: lm[14], wrist: lm[16], hip: lm[24] };
 
-    const rightVis = Math.min(rightShoulder?.visibility ?? 0, rightElbow?.visibility ?? 0, rightWrist?.visibility ?? 0);
-    const leftVis = Math.min(leftShoulder?.visibility ?? 0, leftElbow?.visibility ?? 0, leftWrist?.visibility ?? 0);
+  const rightVis = Math.min(
+    R.shoulder?.visibility ?? 0,
+    R.elbow?.visibility ?? 0,
+    R.wrist?.visibility ?? 0
+  );
 
-    const side = rightVis > leftVis ? "right" : "left";
+  const leftVis = Math.min(
+    L.shoulder?.visibility ?? 0,
+    L.elbow?.visibility ?? 0,
+    L.wrist?.visibility ?? 0
+  );
 
-    const shoulder = side === "right" ? rightShoulder : leftShoulder;
-    const elbow = side === "right" ? rightElbow : leftElbow;
-    const wrist = side === "right" ? rightWrist : leftWrist;
+  const side = rightVis > leftVis ? "right" : "left";
+  const S = side === "right" ? R : L;
 
-    if (!shoulder || !elbow || !wrist) return;
+  const shoulder = S.shoulder;
+  const elbow = S.elbow;
+  const wrist = S.wrist;
+  const hip = S.hip;
 
-    // elbow angle
-    const elbowAngle = angleBetween(shoulder, elbow, wrist);
-    setLastElbowAngle(elbowAngle);
+  if (!shoulder || !elbow || !wrist || !hip) return;
 
-    // simple rep counter logic: down (extended) -> up (flexed) counts 1 rep
-    // thresholds can be tuned
-    
-    // detect shoulder movement (excessive elbow flare): measure horizontal distance between shoulder and elbow
-    const shoulderElbowDx = Math.abs((shoulder.x - elbow.x) * 1); // normalized
-    const shoulderElbowDy = Math.abs((shoulder.y - elbow.y) * 1);
+  // -----------------------------
+  // ANGLE CALCULATOR
+  // -----------------------------
+  function angle(a, b, c) {
+    const ab = { x: a.x - b.x, y: a.y - b.y };
+    const cb = { x: c.x - b.x, y: c.y - b.y };
 
-    // detect wrist drifting forward or away from elbow line (simple heuristic)
-    const elbowWristDx = Math.abs((elbow.x - wrist.x));
+    const dot = ab.x * cb.x + ab.y * cb.y;
+    const magAB = Math.sqrt(ab.x ** 2 + ab.y ** 2);
+    const magCB = Math.sqrt(cb.x ** 2 + cb.y ** 2);
 
-    // feedback rules (simple and intentionally conservative)
-    let localFeedback = "Good visibility. Keep going.";
-
-    if (elbowAngle == null) {
-      localFeedback = "Move so your arm is fully visible on camera.";
-    } else {
-      if (elbowAngle < 30) {
-        localFeedback = "Top of curl — avoid swinging. Keep shoulder stable.";
-      } else if (elbowAngle <= upThreshold ) {
-        localFeedback = "Curling — squeeze the biceps.";
-        setStage("down");
-      } else if (elbowAngle >= downThreshold  ) {
-        setStage("up");
-        localFeedback = "Down position — fully extend but keep elbow slightly soft (don’t lock).";
-      }
-
-      // shoulder stability check: if shoulder-elbow x-distance too large -> elbow flare
-      if (shoulderElbowDx > 0.25) {
-        localFeedback = "Elbow is flaring outward — keep your elbow close to your torso.";
-      }
-
-      // wrist check: if wrist is too far forward of elbow in x-direction, might be cheating
-      if (elbowWristDx > 0.25) {
-        localFeedback = "Wrist drifting forward — keep wrist in line with elbow.";
-      }
-    }
-
-    setFeedback(localFeedback);
-    // rep counting
-    // if (elbowAngle != null) {
-    //         console.log("Stage:", elbowAngle,stage);
-
-    //   if (elbowAngle <= upThreshold && stage === "down") {
-    //     setStage("up");
-    //   }
-
-    //   if (elbowAngle >= downThreshold && stage === "up") {
-    //     setStage("down");
-    //   //  setRepCount((r) => r + 1);
-    //   }
-    // }
+    let ang = Math.acos(dot / (magAB * magCB));
+    return ang * (180 / Math.PI);
   }
+
+  // -----------------------------
+  // ANGLES
+  // -----------------------------
+  const elbowAngle = angle(shoulder, elbow, wrist); // curl angle
+  const elbowTorsoAngle = angle(elbow, shoulder, hip); // elbow-to-body
+  const torsoLean = Math.abs(shoulder.x - hip.x); // leaning backward check
+
+  setLastElbowAngle(elbowAngle); // UI visualization
+
+  // -----------------------------
+  // THRESHOLDS
+  // -----------------------------
+  const upThreshold = 60;   // top of curl
+  const downThreshold = 150; // full stretch
+  const maxElbowTorso = 20; // elbow not flaring outward
+  const maxLean = 0.06;     // torso should not lean back
+
+  let feedback = "";
+  let formWrong = false;
+
+  // -----------------------------
+  // FORM FAULT CHECKS (block reps)
+  // -----------------------------
+
+  // 1. Elbow drifting away from torso
+  if (elbowTorsoAngle > maxElbowTorso) {
+    feedback = "Keep your elbow close — don’t let it drift away.";
+    formWrong = true;
+  }
+
+  // 2. Leaning backward while curling
+  if (torsoLean > maxLean) {
+    feedback = "Don’t lean back — keep torso stable.";
+    formWrong = true;
+  }
+
+  // Update wrong state
+  setformWrong(formWrong);
+
+  // If wrong form → stop here (no rep counting)
+  if (formWrong) {
+    setFeedback(feedback);
+    return;
+  }
+
+  // -----------------------------
+  // NORMAL FEEDBACK + REP LOGIC
+  // -----------------------------
+  if (elbowAngle < upThreshold) {
+    setStage("up");
+    feedback = "Good contraction — squeeze at the top.";
+  } 
+  else if (elbowAngle > downThreshold) {
+    setStage("down");
+    feedback = "Full extension — nice controlled descent.";
+  } 
+  else {
+    feedback = "Controlled curl — keep it smooth.";
+  }
+
+  setFeedback(feedback);
+
+  // -----------------------------
+  // OPTIONAL REP COUNT (only if form is perfect)
+  // -----------------------------
+  /*
+    if (stage === "down" && elbowAngle <= upThreshold) {
+        setStage("up");
+    }
+    if (stage === "up" && elbowAngle >= downThreshold) {
+        setStage("down");
+        setRepCount(r => r + 1);
+    }
+  */
+}
+
 
   useEffect(() => {
     // initialize Pose
@@ -420,18 +475,20 @@ function drawLandmarks(ctx, results) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-  <div className="relative bg-black rounded-lg overflow-hidden">
+<div className="relative bg-black rounded-lg overflow-hidden">
 
   {/* Video */}
-  <video
-  ref={videoRef}
-  className="w-full h-auto object-cover"
-  playsInline
-  muted
-  style={{
-    transform: facingMode === "user" ? "scaleX(-1)" : "scaleX(1)",
-  }}
-/>
+  <div className={`video-wrapper ${formWrong ? "video-wrong" : ""}`}>
+    <video
+      ref={videoRef}
+      className="w-full h-auto object-cover"
+      playsInline
+      muted
+      style={{
+        transform: facingMode === "user" ? "scaleX(-1)" : "scaleX(1)",
+      }}
+    />
+  </div>
 
   {/* Canvas */}
   <canvas
@@ -469,21 +526,18 @@ function drawLandmarks(ctx, results) {
           {lastElbowAngle ? Math.round(lastElbowAngle) + "°" : "—"}
         </p>
       </div>
-<div className="absolute mt-30 left-0 w-full flex justify-center">
-    <div className="bg-black/50 backdrop-blur-md text-white text-lg px-5 py-2 rounded-lg">
-      {feedback || "Perfect form!"}
-    </div>
-  </div>
+
+      {/* (YOU HAVE DUPLICATE FEEDBACK BLOCK — KEEP ONLY ONE) */}
+      
       {/* RIGHT */}
       <div className="flex flex-col text-right">
         <p className="text-lg font-bold text-green-400">{repCount}</p>
         <p className="text-xs opacity-80">Reps</p>
       </div>
-
     </div>
   </div>
 
-  {/* FEEDBACK (BOTTOM CENTER) */}
+  {/* FEEDBACK BOTTOM */}
   <div className="absolute bottom-3 left-0 w-full flex justify-center">
     <div className="bg-black/50 backdrop-blur-md text-white text-sm px-5 py-2 rounded-lg">
       {feedback || "Perfect form!"}
@@ -491,6 +545,7 @@ function drawLandmarks(ctx, results) {
   </div>
 
 </div>
+
 
 
 
