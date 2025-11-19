@@ -27,7 +27,21 @@ const [trainers, setTrainers] = useState([]);
  const [backgroundImage, setBackgroundImage] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
   //const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+let wakeLock = null;
+async function enableWakeLock() {
+  try {
+    wakeLock = await navigator.wakeLock.request("screen");
+    console.log("Screen wake lock enabled");
 
+    // Re-activate if it gets released (e.g., tab switch, minimize)
+    wakeLock.addEventListener("release", () => {
+      console.log("Wake lock released");
+    });
+
+  } catch (err) {
+    console.error(`Wake lock failed: ${err.message}`);
+  }
+}
 useEffect(() => {
   const img = new Image();
   img.src = myBackground;
@@ -37,6 +51,7 @@ useEffect(() => {
   };
 }, []);
 useEffect(() => {
+  enableWakeLock();
     const storedGym = localStorage.getItem("selectedGym");
 
     if (storedGym) {
@@ -108,7 +123,7 @@ const fetchTrainers = async (gymId,token) => {
         { name: "Lateral raises", gradient: "from-blue-400 to-blue-600" },
         { name: "Front raises", gradient: "from-gray-800 to-gray-500" },
         { name: "Settings", gradient: "from-pink-800 to-pink-500" },
-        { name: "Push-ups", gradient: "from-yellow-800 to-yellow-500" },
+        { name: "Squats Side", gradient: "from-yellow-800 to-yellow-500" },
         { name: "Bent-over rows", gradient: "from-violet-800 to-violet-500" },
             //    { name: "Biometric", gradient: "from-blue-800 to-blue-500" },
         { name: "Deadlifts", gradient: "from-blue-800 to-blue-500" },
@@ -161,7 +176,7 @@ navigate("/inactive-screen");
 //     navigate("/inactive-screen");
 // }
         
-        }else if (tabName === "Push-ups"){
+        }else if (tabName === "Squats Side"){
             navigate("/lead_data");
 
         
@@ -310,7 +325,7 @@ navigate("/inactive-screen");
         className="w-12 h-12 filter brightness-0 invert" // white tint
       />
     )}
-    {tab.name === "Push-ups" && (
+    {tab.name === "Squats Side" && (
       <img
         src={leadIcon}
         alt="Client Icon"

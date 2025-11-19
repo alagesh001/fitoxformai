@@ -299,6 +299,9 @@ function analyzeForm(results) {
   if (hipBelowKnee && kneeAngle <= 110) {
     feedback = "Great depth — stay stable!";
   }
+  const kneeValgusLimit = 0.15; // adjust based on pose scale
+
+const kneeValid = kneeValgus <= kneeValgusLimit;
 
   // ----------------------------
   // SQUAT PHASE / REP COUNTER
@@ -306,14 +309,15 @@ function analyzeForm(results) {
 
   
 
-  if (kneeAngle < downThreshold) {
-    setStage("up");
-  }
-
-  if (kneeAngle > upThreshold ) {
+if ( kneeAngle < downThreshold && kneeValid) {
     setStage("down");
-    //setRepCount(r => r + 1); // count 1 rep
-  }
+}
+
+// Trigger UP only if previously DOWN and knees are valid
+if ( kneeAngle > upThreshold && kneeValid) {
+    setStage("up");
+    // setRepCount(r => r + 1); // count 1 rep
+}
 
   setFeedback(feedback);
 }

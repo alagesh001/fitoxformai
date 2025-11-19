@@ -47,22 +47,7 @@ const upThreshold = 55; // curl top position
 const downThreshold = 150; // arm extended
 
   const step = ((maxAngle - minAngle) / halfCycle) * stepDuration;
-let wakeLock = null;
 
-async function enableWakeLock() {
-  try {
-    wakeLock = await navigator.wakeLock.request("screen");
-    console.log("Screen wake lock enabled");
-
-    // Re-activate if it gets released (e.g., tab switch, minimize)
-    wakeLock.addEventListener("release", () => {
-      console.log("Wake lock released");
-    });
-
-  } catch (err) {
-    console.error(`Wake lock failed: ${err.message}`);
-  }
-}
   // Sync React state with refs
 //   useEffect(() => {
 //     stageRef.current = stage;
@@ -70,7 +55,7 @@ async function enableWakeLock() {
 
   // Increment reps on stage change to "down"
   useEffect(() => {
-    if (stage === "up") {
+    if (stage === "down") {
       setRepCount((r) => r + 1);
       console.log("Stage DOWN, rep counted:", repCount + 1);
     }
@@ -244,9 +229,7 @@ function analyzeForm(results) {
 
   const dxSE = Math.abs(shoulder.x - elbow.x);
   const dxEW = Math.abs(elbow.x - wrist.x);
-setLastElbowAngle(
- `abductangle=${abductionAngle.toFixed(3)} | flareLimit=${flareLimit.toFixed(3)} | dxSE=${dxSE.toFixed(3)} | wristLimit=${wristForwardLimit.toFixed(3)} | dxEW=${dxEW.toFixed(3)}`
-);
+setLastElbowAngle(elbowAngle);
   // ===============================
   //  FORM FEEDBACK PRIORITY
   // ===============================
@@ -288,12 +271,12 @@ setLastElbowAngle(
   const margin = 5;
 
   if (abductionAngle >= upThreshold + margin) {
-    setStage("up");
+    setStage("down");
     feedback = "Good — lifted to shoulder height.";
   }
 
   else if (abductionAngle <= downThreshold - margin) {
-    setStage("down");
+    setStage("up");
     feedback = "Lowering controlled — great.";
   }
 
@@ -344,7 +327,6 @@ setLastElbowAngle(
       try {
         cameraRef.current?.stop?.();
       } catch (e) {}
-enableWakeLock();
       cameraRef.current = new Camera(videoRef.current, {
         onFrame: async () => {
           if (!poseRef.current) return;
@@ -507,8 +489,7 @@ enableWakeLock();
       <div className="text-center flex flex-col">
         <p className="text-lg font-bold">{stage}</p>
         <p className="text-xs opacity-80">
-            {lastElbowAngle}
-          {/* {lastElbowAngle ? Math.round(lastElbowAngle) + "°" : "—"} */}
+           {lastElbowAngle ? Math.round(lastElbowAngle) + "°" : "—"} 
         </p>
       </div>
 <div className="absolute mt-30 left-0 w-full flex justify-center">

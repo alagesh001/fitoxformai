@@ -20,6 +20,12 @@ import SquatFormCorrector from "./pages/Squatform";
 import ShoulderPressCorrector from "./pages/Shoulderpress";
 
 import LateralRiseFormCorrector from "./pages/Lateralrise";
+import FrontRiseFormCorrector from "./pages/Frontraise";
+import PushUpsFormCorrector from "./pages/Pushup";
+import BentOverFormCorrector from "./pages/BentOverRows";
+import SquatSideFormCorrector from "./pages/SquatsSideView";
+
+import DeadLiftFormCorrector from "./pages/Deadlift";
 
 function App() {
   // Helper function to check standalone mode
@@ -57,14 +63,14 @@ function App() {
         <Route path="/transac-hist" element={<SquatFormCorrector />} />
         <Route path="/dash-admin" element={<ShoulderPressCorrector />} />
         <Route path="/analytics-screen" element={<LateralRiseFormCorrector />} />
-        <Route path="/inactive-screen" element={<BicepCurlFormCorrector />} />
+        <Route path="/inactive-screen" element={<FrontRiseFormCorrector />} />
         <Route path="/register-screen" element={<GymRegistration />} />
         <Route path="/enquire_now" element={<BicepCurlFormCorrector />} />
-        <Route path="/lead_data" element={<BicepCurlFormCorrector />} />
-        <Route path="/add_lead" element={<BicepCurlFormCorrector />} />
+        <Route path="/lead_data" element={<SquatSideFormCorrector />} />
+        <Route path="/add_lead" element={<BentOverFormCorrector />} />
         <Route path="/install_page" element={<BicepCurlFormCorrector />} />
         <Route path="/bio-dash" element={<BicepCurlFormCorrector />} />
-        <Route path="/fitox-hub" element={<BicepCurlFormCorrector />} />
+        <Route path="/fitox-hub" element={<DeadLiftFormCorrector />} />
 
       </Routes>
     </Router>
