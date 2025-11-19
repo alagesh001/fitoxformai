@@ -8,28 +8,38 @@
     @apply relative;
   }
 
- .video-wrong::after {
+  /* === GREEN TINT (default good form) === */
+  .video-good::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 255, 0, 0.20); /* soft green */
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  /* === RED TINT === */
+  .video-wrong::after {
     content: "";
     position: absolute;
     inset: 0;
     background: rgba(255, 0, 0, 0.35); /* red overlay */
-    z-index: 20; /* above video */
+    z-index: 20;
     pointer-events: none;
   }
 
-  /* BIG X MARK */
+  /* === BIG RED X === */
   .video-wrong::before {
     content: "✖";
     position: absolute;
     inset: 0;
     display: flex;
-    align-items: top;
+    align-items: center;
     justify-content: center;
-    font-size: 120px;      /* LARGE X */
+    font-size: 120px;
     font-weight: 900;
     color: rgba(255, 0, 0, 0.85);
-    z-index: 30;  
-            /* above tint */
+    z-index: 30;
     pointer-events: none;
   }
 }

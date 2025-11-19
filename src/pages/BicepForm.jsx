@@ -33,6 +33,7 @@ export default function BicepCurlFormCorrector() {
   const [armSide, setArmSide] = useState("right"); // 'left' or 'right' - autopreview
 
   const [formWrong, setformWrong] = useState(false); // 'left' or 'right' - autopreview
+const [showTick, setShowTick] = useState(false);
 
 
   const elbowAngleRef = useRef(40);
@@ -56,10 +57,16 @@ export default function BicepCurlFormCorrector() {
 
   // Increment reps on stage change to "down"
   useEffect(() => {
-    if (stage === "up") {
-      setRepCount((r) => r + 1);
-      console.log("Stage DOWN, rep counted:", repCount + 1);
-    }
+      if (!stage) return;
+
+      setShowTick(true);
+  const timer = setTimeout(() => setShowTick(false), 400);
+    return () => clearTimeout(timer);
+
+    // if (stage === "up") {
+    //   setRepCount((r) => r + 1);
+    //   console.log("Stage DOWN, rep counted:", repCount + 1);
+    // }
   }, [stage]);
 
 //   useEffect(() => {
@@ -107,7 +114,7 @@ function drawLandmarks(ctx, results) {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.save();
 
-  // Mirror horizontally
+  // Mirror horizontally for selfie mode
   ctx.translate(ctx.canvas.width, 0);
   ctx.scale(-1, 1);
 
@@ -119,12 +126,15 @@ function drawLandmarks(ctx, results) {
     return;
   }
 
+  // Helper: take pixel coordinates
   const P = (i) => ({
     x: lm[i].x * ctx.canvas.width,
     y: lm[i].y * ctx.canvas.height
   });
 
-  const drawLine = (a, b, color = "rgba(0,255,0,0.9)", width = 5) => {
+  const vis = (i) => lm[i].visibility ?? 0;
+
+  const drawLine = (a, b, color = "white", width = 5) => {
     const A = P(a);
     const B = P(b);
 
@@ -136,7 +146,7 @@ function drawLandmarks(ctx, results) {
     ctx.stroke();
   };
 
-  const drawPoint = (i, color = "rgba(255,255,255,0.95)", r = 6) => {
+  const drawPoint = (i, color = "white", r = 6) => {
     const p = P(i);
     ctx.beginPath();
     ctx.arc(p.x, p.y, r, 0, 2 * Math.PI);
@@ -144,43 +154,55 @@ function drawLandmarks(ctx, results) {
     ctx.fill();
   };
 
-  // RIGHT SIDE LANDMARKS
+  // Right side joints
   const R = {
-    SHOULDER: 12,
-    ELBOW: 14,
-    WRIST: 16,
-    HIP: 24,
-    KNEE: 26,
-    ANKLE: 28
+    SHOULDER: 12, ELBOW: 14, WRIST: 16,
+    HIP: 24, KNEE: 26, ANKLE: 28
   };
 
-  // ================================
-  //     PUSH-UP SIDE VIEW LINES
-  // ================================
+  // Left side joints
+  const L = {
+    SHOULDER: 11, ELBOW: 13, WRIST: 15,
+    HIP: 23, KNEE: 25, ANKLE: 27
+  };
+
+  // Compute arm visibility score
+  const rightScore = vis(R.SHOULDER) + vis(R.ELBOW) + vis(R.WRIST);
+  const leftScore  = vis(L.SHOULDER) + vis(L.ELBOW) + vis(L.WRIST);
+
+  // Choose better side
+  const SIDE = rightScore >= leftScore ? R : L;
+
+  // ==========================================
+  // DRAW ONLY THE SELECTED SIDE
+  // ==========================================
 
   // Arm
-  drawLine(R.SHOULDER, R.ELBOW, "rgba(0,150,255,1)", 6);
-  drawLine(R.ELBOW, R.WRIST, "rgba(0,220,255,1)", 6);
+  drawLine(SIDE.SHOULDER, SIDE.ELBOW, "rgba(0,150,255,1)", 6);
+  drawLine(SIDE.ELBOW, SIDE.WRIST, "rgba(0,220,255,1)", 6);
 
   // Torso
-  drawLine(R.SHOULDER, R.HIP, "rgba(255,200,0,1)", 7);
+  drawLine(SIDE.SHOULDER, SIDE.HIP, "rgba(255,200,0,1)", 7);
 
-  // Leg line
-  drawLine(R.HIP, R.KNEE, "rgba(0,255,100,1)", 6);
-  drawLine(R.KNEE, R.ANKLE, "rgba(0,255,100,1)", 6);
+  // Leg
+  drawLine(SIDE.HIP, SIDE.KNEE, "rgba(0,255,100,1)", 6);
+  drawLine(SIDE.KNEE, SIDE.ANKLE, "rgba(0,255,100,1)", 6);
 
-  // Points (only important landmarks)
+  // Points
   [
-    R.SHOULDER, 
-    R.ELBOW, 
-    R.WRIST, 
-    R.HIP, 
-    R.KNEE, 
-    R.ANKLE
-  ].forEach(i => drawPoint(i));
+    SIDE.SHOULDER,
+    SIDE.ELBOW,
+    SIDE.WRIST,
+    SIDE.HIP,
+    SIDE.KNEE,
+    SIDE.ANKLE
+  ].forEach((i) => drawPoint(i, "white", 6));
 
   ctx.restore();
 }
+
+
+
 
 
 
@@ -258,8 +280,8 @@ function drawLandmarks(ctx, results) {
   // -----------------------------
   const upThreshold = 60;   // top of curl
   const downThreshold = 150; // full stretch
-  const maxElbowTorso = 20; // elbow not flaring outward
-  const maxLean = 0.06;     // torso should not lean back
+  const maxElbowTorso = 25; // elbow not flaring outward
+  const maxLean = 0.07;     // torso should not lean back
 
   let feedback = "";
   let formWrong = false;
@@ -293,11 +315,11 @@ function drawLandmarks(ctx, results) {
   // NORMAL FEEDBACK + REP LOGIC
   // -----------------------------
   if (elbowAngle < upThreshold) {
-    setStage("up");
+    setStage("down");
     feedback = "Good contraction — squeeze at the top.";
   } 
   else if (elbowAngle > downThreshold) {
-    setStage("down");
+    setStage("up");
     feedback = "Full extension — nice controlled descent.";
   } 
   else {
@@ -478,17 +500,17 @@ function drawLandmarks(ctx, results) {
 <div className="relative bg-black rounded-lg overflow-hidden">
 
   {/* Video */}
-  <div className={`video-wrapper ${formWrong ? "video-wrong" : ""}`}>
-    <video
-      ref={videoRef}
-      className="w-full h-auto object-cover"
-      playsInline
-      muted
-      style={{
-        transform: facingMode === "user" ? "scaleX(-1)" : "scaleX(1)",
-      }}
-    />
-  </div>
+ <div className={`video-wrapper ${formWrong ? "video-wrong" : "video-good"}`}>
+  <video
+    ref={videoRef}
+    className="w-full h-auto object-cover"
+    playsInline
+    muted
+    style={{
+      transform: facingMode === "user" ? "scaleX(-1)" : "scaleX(1)",
+    }}
+  />
+</div>
 
   {/* Canvas */}
   <canvas
@@ -514,26 +536,33 @@ function drawLandmarks(ctx, results) {
     ">
       
       {/* LEFT */}
-      <div className="flex flex-col gap-1 text-left">
+      {/* <div className="flex flex-col gap-1 text-left">
         <p className="opacity-80">Camera: <span className="font-semibold opacity-100">{facingMode === 'user' ? 'Front' : 'Back'}</span></p>
         <p className="opacity-80">Arm: <span className="font-semibold opacity-100">{armSide}</span></p>
-      </div>
+      </div> */}
 
       {/* CENTER */}
       <div className="text-center flex flex-col">
-        <p className="text-lg font-bold">{stage}</p>
-        <p className="text-xs opacity-80">
+<p className="text-6xl font-bold transition-all duration-300">
+  {showTick 
+    ? <span className="text-green-400">✔</span>
+    : stage === "up"
+      ? "⬆ UP"
+      : stage === "down"
+        ? "⬇ DOWN"
+        : "—"}
+</p>      {/* <p className="text-xs opacity-80">
           {lastElbowAngle ? Math.round(lastElbowAngle) + "°" : "—"}
-        </p>
+        </p> */}
       </div>
 
       {/* (YOU HAVE DUPLICATE FEEDBACK BLOCK — KEEP ONLY ONE) */}
       
       {/* RIGHT */}
-      <div className="flex flex-col text-right">
+      {/* <div className="flex flex-col text-right">
         <p className="text-lg font-bold text-green-400">{repCount}</p>
         <p className="text-xs opacity-80">Reps</p>
-      </div>
+      </div> */}
     </div>
   </div>
 
