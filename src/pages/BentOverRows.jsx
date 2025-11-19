@@ -28,9 +28,10 @@ export default function BentOverFormCorrector() {
   const [running, setRunning] = useState(false);
   const [repCount, setRepCount] = useState(0);
   const [stage, setStage] = useState("down"); // 'down' or 'up'
-  const [feedback, setFeedback] = useState("Stand so your full leg is visible to the camera.");
+  const [feedback, setFeedback] = useState("Stand so your full side body is visible to the camera.");
   const [lastElbowAngle, setLastElbowAngle] = useState(null);
   const [armSide, setArmSide] = useState("right"); // 'left' or 'right' - autopreview
+  const [backCheck, setBackCheck] = useState("");
 
 
 
@@ -204,102 +205,92 @@ function analyzeForm(results) {
 
   // Right side landmarks
   const shoulder = lm[12];
-  const elbow = lm[14];
-  const wrist = lm[16];
-  const hip = lm[24];
-  const knee = lm[26];
-  const ankle = lm[28];
+  const elbow    = lm[14];
+  const wrist    = lm[16];
+  const hip      = lm[24];
+  const knee     = lm[26];
+  const ankle    = lm[28];
 
-  if (!shoulder || !elbow || !wrist || !hip) return;
+  if (!shoulder || !elbow || !wrist || !hip || !knee || !ankle) return;
 
   // ------------------------------
-  // Helper functions
+  // Helper: angle at point b
   // ------------------------------
-
   function angle(a, b, c) {
     const ab = { x: a.x - b.x, y: a.y - b.y };
     const cb = { x: c.x - b.x, y: c.y - b.y };
-
     const dot = ab.x * cb.x + ab.y * cb.y;
     const magAB = Math.sqrt(ab.x**2 + ab.y**2);
     const magCB = Math.sqrt(cb.x**2 + cb.y**2);
-
     let ang = Math.acos(dot / (magAB * magCB));
     return ang * (180 / Math.PI);
   }
 
-  const elbowAngle = angle(shoulder, elbow, wrist);
-  const bodyAngle  = angle(shoulder, hip, ankle); // straight line check
-
-  // Vertical positions for depth detection
-  const shoulderY = shoulder.y;
-  const elbowY = elbow.y;
-  const wristY = wrist.y;
-
   // ------------------------------
-  // Thresholds
+  // ANGLES
   // ------------------------------
-
-  const downDepth = wristY > shoulderY * 1.05;   // going deep enough
-  const upDepth   = wristY < shoulderY * 0.92;   // fully extended
-
-  const elbowMin = 90;      // 90° bottom
-  const elbowMax = 160;     // 160° top
-
-  const straightMin = 155;  // torso straight  
-  const straightBad = 140;  // sagging
-
-  let feedback = "";
-  let stageLocal = stage; // use your React state variable
+  const torsoThighAngle = angle(shoulder, hip, knee);  // 100–120°
+  const elbowAngle      = angle(shoulder, elbow, wrist); // full stretch bottom to 90° top
+  const wristElbowAngle = angle(elbow, wrist, shoulder); // 70–90°
 
   // ------------------------------
   // FORM CHECKS
   // ------------------------------
+  let feedback = "";
 
-  // 1. Hip sag check
-  if (bodyAngle < straightBad) {
-    feedback = "Hips dropping — tighten core.";
-    setFeedback(feedback);
-    return;
-  }
+// Torso vector
+const dx = shoulder.x - hip.x;
+const dy = shoulder.y - hip.y;
 
-  // 2. Butt too high
-  if (bodyAngle > 175) {
-    feedback = "Lower your hips — keep body straight line.";
-    setFeedback(feedback);
-    return;
-  }
+// Angle to horizontal
+let torsoAngleFloor = Math.atan2(dy, dx) * (180 / Math.PI);
 
-  // 3. Elbow flaring (front view needed, so skip)
-  // 4. Head/neck — optional
+// Make positive
+if (torsoAngleFloor < 0) torsoAngleFloor = Math.abs(torsoAngleFloor);
+
+// Now check if torso is ~45° to floor
+const torsoGood = torsoAngleFloor >= 30 && torsoAngleFloor <= 60;
+
+ const elbowGood   = (stage === "down" && elbowAngle >= 160) || (stage === "up" && elbowAngle <= 90);
+  const elbowAboveHips = (elbow.y < hip.y); // top position
+  const wristGood   = elbowAngle >= 70 && elbowAngle <= 90;
+const backAngle = angle(shoulder, hip, knee); // ideally ~160–180° straight
+const backGood = backAngle >= 160;
+
+if (!torsoGood) {
+  feedback = "Torso angle incorrect — lean forward ~45° to floor.";
+}   else if (!elbowGood && stage === "down") feedback = "Elbows not correct — fully stretch at bottom, pull above hips at top.";
+  else if (!elbowAboveHips && stage === "up") feedback = "Pull elbows above hips.";
+  else if (!wristGood && stage === "up") feedback = "Control elbow-wrist angle (70–90°).";
+ if (!backGood){
+     setBackCheck("Keep your back straight — avoid rounding.")
+ }else{
+         setBackCheck("")
+
+ };
 
   // ------------------------------
-  // REP COUNT & STAGE LOGIC
+  // REP / STAGE LOGIC (only if all good)
   // ------------------------------
-
-    // Going down
-    if (elbowAngle < elbowMin && downDepth) {
+    const downElbowAngle = 160; // bottom
+    const upElbowAngle   = 90;  // top
+if(torsoGood){
+    if (elbowAngle >= downElbowAngle) {
       setStage("up");
-      feedback = "Good depth — push up!";
     }
-  
-    // Coming up
-    if (elbowAngle > elbowMax && upDepth) {
+
+    if ( wristGood && wristGood && elbowAboveHips) {
       setStage("down");
-      feedback = "Good rep!";
+      feedback = "Good rep — elbows above hips!";
+      // setRepCount(r => r + 1);
     }
   
-
-  // ------------------------------
-  // Otherwise smooth movement
-  // ------------------------------
-
-  if (!feedback) {
-    feedback = "Nice and controlled — keep body aligned.";
-  }
-
+}
+  setLastElbowAngle(torsoAngleFloor);
   setFeedback(feedback);
 }
+
+
 
 
 
@@ -511,7 +502,15 @@ function analyzeForm(results) {
     <div className="bg-black/50 backdrop-blur-md text-white text-lg px-5 py-2 rounded-lg">
       {feedback || "Perfect form!"}
     </div>
+    
   </div>
+  <div className="absolute mt-60 left-0 w-full flex justify-center">
+    <div className="bg-black/50 backdrop-blur-md text-white text-lg px-5 py-2 rounded-lg">
+      {backCheck || ""}
+    </div>
+    
+  </div>
+  
       {/* RIGHT */}
       <div className="flex flex-col text-right">
         <p className="text-lg font-bold text-green-400">{repCount}</p>
