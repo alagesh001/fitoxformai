@@ -31,8 +31,10 @@ export default function TricepCurlFormCorrector() {
   const [feedback, setFeedback] = useState("Stand so your full arm is visible to the camera.");
   const [lastElbowAngle, setLastElbowAngle] = useState(null);
   const [armSide, setArmSide] = useState("right"); // 'left' or 'right' - autopreview
+  const [formWrong, setformWrong] = useState(false); // 'left' or 'right' - autopreview
 
 
+const [showTick, setShowTick] = useState(false);
 
   const elbowAngleRef = useRef(40);
   const stageRef = useRef("down");
@@ -55,10 +57,15 @@ export default function TricepCurlFormCorrector() {
 
   // Increment reps on stage change to "down"
   useEffect(() => {
-    if (stage === "down") {
-      setRepCount((r) => r + 1);
-      console.log("Stage DOWN, rep counted:", repCount + 1);
-    }
+     if (!stage) return;
+
+      setShowTick(true);
+  const timer = setTimeout(() => setShowTick(false), 400);
+    return () => clearTimeout(timer);
+    // if (stage === "down") {
+    //   setRepCount((r) => r + 1);
+    //   console.log("Stage DOWN, rep counted:", repCount + 1);
+    // }
   }, [stage]);
 
 //   useEffect(() => {
@@ -106,10 +113,12 @@ function drawLandmarks(ctx, results) {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.save();
 
-  // No mirroring (we want true orientation)
-  ctx.globalAlpha = 0.85;
+  // Mirror horizontally
   ctx.scale(-1, 1);
   ctx.translate(-ctx.canvas.width, 0);
+
+  ctx.globalAlpha = 0.85;
+
   const drawLine = (a, b, color = "rgba(0,255,0,0.8)") => {
     ctx.beginPath();
     ctx.moveTo(a.x * ctx.canvas.width, a.y * ctx.canvas.height);
@@ -132,31 +141,41 @@ function drawLandmarks(ctx, results) {
     return;
   }
 
-  const rightShoulder = lm[11];
-  const rightElbow = lm[13];
-  const rightWrist = lm[15];
-  const leftShoulder = lm[12];
-  const leftElbow = lm[14];
-  const leftWrist = lm[16];
+  // Shoulders
+  const RS = lm[11];
+  const RE = lm[13];
+  const RW = lm[15];
 
-  const rightVis = Math.min(
-    rightShoulder?.visibility ?? 0,
-    rightElbow?.visibility ?? 0,
-    rightWrist?.visibility ?? 0
-  );
-  const leftVis = Math.min(
-    leftShoulder?.visibility ?? 0,
-    leftElbow?.visibility ?? 0,
-    leftWrist?.visibility ?? 0
-  );
+  const LS = lm[12];
+  const LE = lm[14];
+  const LW = lm[16];
 
-  const side = rightVis > leftVis ? "left" : "right";
+  // Draw both shoulders always
+  drawPoint(RS, 6, "yellow");
+  drawPoint(LS, 6, "yellow");
+
+  // Visibility check
+  const rightVis = Math.min(RS?.visibility ?? 0, RE?.visibility ?? 0, RW?.visibility ?? 0);
+  const leftVis  = Math.min(LS?.visibility ?? 0, LE?.visibility ?? 0, LW?.visibility ?? 0);
+
+  // Detect which arm is raised upward
+  const rightRaised = RE.y < RS.y;
+  const leftRaised  = LE.y < LS.y;
+
+  let side = "right"; // fallback
+
+  if (rightRaised && !leftRaised) side = "right";
+  else if (!rightRaised && leftRaised) side = "left";
+  else if (rightRaised && leftRaised) side = rightVis > leftVis ? "right" : "left";
+  else side = rightVis > leftVis ? "right" : "left"; // none raised
+
   setArmSide(side);
 
-  const shoulder = side === "left" ? rightShoulder : leftShoulder;
-  const elbow = side === "left" ? rightElbow : leftElbow;
-  const wrist = side === "left" ? rightWrist : leftWrist;
+  const shoulder = side === "right" ? RS : LS;
+  const elbow    = side === "right" ? RE : LE;
+  const wrist    = side === "right" ? RW : LW;
 
+  // Draw only chosen arm fully
   if (shoulder && elbow && wrist) {
     drawLine(shoulder, elbow);
     drawLine(elbow, wrist);
@@ -168,6 +187,7 @@ function drawLandmarks(ctx, results) {
 
   ctx.restore();
 }
+
 
 
   function angleBetween(A, B, C) {
@@ -182,6 +202,62 @@ function drawLandmarks(ctx, results) {
     cosine = Math.min(1, Math.max(-1, cosine));
     return (Math.acos(cosine) * 180) / Math.PI;
   }
+function checkForm(lm) {
+  // ---- Extract both arms ----
+  const RS = lm[11], RE = lm[13], RW = lm[15];
+  const LS = lm[12], LE = lm[14], LW = lm[16];
+
+  // ---- Detect arm raised upward ----
+  const rightRaised = RE.y < RS.y - 0.02;
+  const leftRaised  = LE.y < LS.y - 0.02;
+
+  // Choose side
+  let side = null;
+  if (rightRaised && !leftRaised) side = "right";
+  else if (leftRaised && !rightRaised) side = "left";
+  else if (rightRaised && leftRaised) {
+    // use better visibility
+    const rightVis = Math.min(RS.visibility, RE.visibility, RW.visibility);
+    const leftVis  = Math.min(LS.visibility, LE.visibility, LW.visibility);
+    side = rightVis > leftVis ? "right" : "left";
+  } else {
+    // no arm raised -> skip form checking
+    return true; // treat as wrong form
+  }
+
+  // ---- Select correct arm ----
+  const shoulder = side === "right" ? RS : LS;
+  const elbow    = side === "right" ? RE : LE;
+  const wrist    = side === "right" ? RW : LW;
+
+  let formWrong = false;
+
+  // ---------------------------------------
+  // 1️⃣ Elbow must be pointing upward
+  // ---------------------------------------
+  const isElbowUp = elbow.y < shoulder.y - 0.02; 
+  if (!isElbowUp) formWrong = true;
+
+  // ---------------------------------------
+  // 2️⃣ Elbow left/right tilt (15° tolerance)
+  // ---------------------------------------
+  const dx = elbow.x - shoulder.x;
+  const dy = shoulder.y - elbow.y;
+  const elbowAngle = Math.atan2(dy, dx) * (180 / Math.PI); // 90 = straight up
+
+  if (Math.abs(90 - elbowAngle) > 15) formWrong = true;
+
+  // ---------------------------------------
+  // 3️⃣ Wrist too low (checked only if visible)
+  // ---------------------------------------
+  const wristVisible = wrist.visibility > 0.5;
+  if (wristVisible) {
+    const isWristTooLow = wrist.y > elbow.y + 0.02;
+    if (isWristTooLow) formWrong = true;
+  }
+
+  return formWrong;
+}
 
  function analyzeForm(results) {
   const lm = results?.poseLandmarks;
@@ -205,51 +281,65 @@ function drawLandmarks(ctx, results) {
 
   // elbow extension angle (tricep curl angle)
   const elbowAngle = angleBetween(shoulder, elbow, wrist);
-  setLastElbowAngle(elbowAngle);
+  //setLastElbowAngle(elbowAngle);
 
   // ----- FORM CHECKS -----
 
-  let feedback = "Good form — keep going.";
-
+let feedback = "Good form — keep going.";
+let formOK = false;  // assume good form until a rule fails
   // 1️⃣ Upper arm should be horizontal (parallel to floor)
-  const upperArmAngle = Math.abs(shoulder.y - elbow.y); // y-difference
-  if (upperArmAngle > 0.15) {
-    feedback = "Keep upper arm parallel to the floor.";
+// 1️⃣ Upper arm horizontal
+const upperArmAngle = Math.abs(shoulder.y - elbow.y);
+if (upperArmAngle > 0.15) {
+  feedback = "Keep upper arm parallel to the floor.";
+  formOK = false;
+}
+
+// 2️⃣ Elbow stays fixed
+const elbowMovement = Math.abs(elbow.x - shoulder.x);
+if (elbowMovement > 0.25) {
+  feedback = "Don’t swing your elbow — keep it fixed.";
+  formOK = false;
+}
+
+// 3️⃣ Wrist alignment
+const wristDx = Math.abs(elbow.x - wrist.x);
+if (wristDx > 0.22) {
+  feedback = "Keep wrist aligned with elbow — no bending.";
+  formOK = false;
+}
+
+// 4️⃣ Torso stability
+const torsoAngle = Math.abs(RS?.y - LS?.y);
+if (torsoAngle > 0.2) {
+  feedback = "Keep your torso stable — don’t twist.";
+  formOK = false;
+}
+
+ const formWrongIs = checkForm(lm);
+setformWrong(formWrongIs);
+  if (formWrongIs) {
+    // DO NOTHING
+    
+    return;
   }
 
-  // 2️⃣ Elbow should NOT move forward/back (fixed hinge)
-  const elbowMovement = Math.abs(elbow.x - shoulder.x);
-  if (elbowMovement > 0.25) {
-    feedback = "Don’t swing your elbow — keep it fixed.";
-  }
-
-  // 3️⃣ Wrist should stay in straight line with elbow
-  const wristDx = Math.abs(elbow.x - wrist.x);
-  if (wristDx > 0.22) {
-    feedback = "Keep wrist aligned with elbow — no bending.";
-  }
-
-  // 4️⃣ Torso should be stable
-  const torsoAngle = Math.abs(RS?.y - LS?.y);
-  if (torsoAngle > 0.2) {
-    feedback = "Keep your torso stable — don’t twist.";
-  }
-
+//setformWrong(!formOK);
   // 5️⃣ Elbow angle rules (tricep)
   // elbow bent (90°) → "up" phase
   // elbow extended (~160°) → "down" phase (kickback)
-  const bendThreshold = 80;   // arm bent
-  const extendThreshold = 150; // full extension
+ const bendThreshold = 80; 
+const extendThreshold = 150;
 
-  if (elbowAngle < bendThreshold) {
-    feedback = "Starting position — keep elbow tucked.";
-    setStage("up");
-  }
+if (elbowAngle < bendThreshold) {
+  if (formOK) feedback = "Starting position — keep elbow tucked.";
+  setStage("up");
+}
 
-  if (elbowAngle > extendThreshold) {
-    feedback = "Full extension — squeeze triceps!";
-    setStage("down");
-  }
+if (elbowAngle > extendThreshold) {
+  if (formOK) feedback = "Full extension — squeeze triceps!";
+  setStage("down");
+}
 
   // 6️⃣ Rep count logic
 //   if (elbowAngle != null) {
@@ -420,15 +510,17 @@ function drawLandmarks(ctx, results) {
   <div className="relative bg-black rounded-lg overflow-hidden">
 
   {/* Video */}
+  <div className={`video-wrapper ${formWrong ? "video-wrong" : "video-good"}`}>
   <video
-  ref={videoRef}
-  className="w-full h-auto object-cover"
-  playsInline
-  muted
-  style={{
-    transform: facingMode === "user" ? "scaleX(-1)" : "scaleX(1)",
-  }}
-/>
+    ref={videoRef}
+    className="w-full h-auto object-cover"
+    playsInline
+    muted
+    style={{
+      transform: facingMode === "user" ? "scaleX(-1)" : "scaleX(1)",
+    }}
+  />
+</div>
 
   {/* Canvas */}
   <canvas
@@ -454,28 +546,35 @@ function drawLandmarks(ctx, results) {
     ">
       
       {/* LEFT */}
-      <div className="flex flex-col gap-1 text-left">
+      {/* <div className="flex flex-col gap-1 text-left">
         <p className="opacity-80">Camera: <span className="font-semibold opacity-100">{facingMode === 'user' ? 'Front' : 'Back'}</span></p>
         <p className="opacity-80">Arm: <span className="font-semibold opacity-100">{armSide}</span></p>
-      </div>
+      </div> */}
 
       {/* CENTER */}
-      <div className="text-center flex flex-col">
-        <p className="text-lg font-bold">{stage}</p>
-        <p className="text-xs opacity-80">
-          {lastElbowAngle ? Math.round(lastElbowAngle) + "°" : "—"}
-        </p>
-      </div>
-<div className="absolute mt-30 left-0 w-full flex justify-center">
+       <div className="text-center flex flex-col">
+<p className="text-6xl font-bold transition-all duration-300">
+  {showTick 
+    ? <span className="text-green-400">✔</span>
+    : stage === "up"
+      ? "⬆ UP"
+      : stage === "down"
+        ? "⬇ DOWN"
+        : "—"}
+</p>
+
+  
+</div>
+{/* <div className="absolute mt-30 left-0 w-full flex justify-center">
     <div className="bg-black/50 backdrop-blur-md text-white text-lg px-5 py-2 rounded-lg">
       {feedback || "Perfect form!"}
     </div>
   </div>
       {/* RIGHT */}
-      <div className="flex flex-col text-right">
+      {/* <div className="flex flex-col text-right">
         <p className="text-lg font-bold text-green-400">{repCount}</p>
         <p className="text-xs opacity-80">Reps</p>
-      </div>
+      </div> */} 
 
     </div>
   </div>
