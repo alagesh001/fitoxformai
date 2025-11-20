@@ -32,6 +32,8 @@ export default function SquatFormCorrector() {
   const [lastElbowAngle, setLastElbowAngle] = useState(null);
   const [armSide, setArmSide] = useState("right"); // 'left' or 'right' - autopreview
 
+  const [formWrong, setformWrong] = useState(false); // 'left' or 'right' - autopreview
+const [showTick, setShowTick] = useState(false);
 
 
   const elbowAngleRef = useRef(40);
@@ -48,57 +50,20 @@ export default function SquatFormCorrector() {
 
   const step = ((maxAngle - minAngle) / halfCycle) * stepDuration;
 
-  // Sync React state with refs
-//   useEffect(() => {
-//     stageRef.current = stage;
-//   }, [stage]);
-
+ 
   // Increment reps on stage change to "down"
   useEffect(() => {
-    if (stage === "up") {
-      setRepCount((r) => r + 1);
-      console.log("Stage DOWN, rep counted:", repCount + 1);
-    }
+     if (!stage) return;
+
+      setShowTick(true);
+  const timer = setTimeout(() => setShowTick(false), 400);
+    return () => clearTimeout(timer);
+    // if (stage === "up") {
+    //   setRepCount((r) => r + 1);
+    //   console.log("Stage DOWN, rep counted:", repCount + 1);
+    // }
   }, [stage]);
 
-//   useEffect(() => {
-//     function stepAngle() {
-//       // update angle
-//       elbowAngleRef.current += step * directionRef.current;
-
-//       // stage changes based on thresholds
-//       if (directionRef.current === -1 && elbowAngleRef.current <= upThreshold && stageRef.current === "down") {
-//         stageRef.current = "up";
-//         setStage("up");
-//         console.log("Stage UP", elbowAngleRef.current);
-//       }
-
-//       if (directionRef.current === 1 && elbowAngleRef.current >= downThreshold && stageRef.current === "up") {
-//         stageRef.current = "down";
-//         setStage("down");
-//         console.log("Stage DOWN", elbowAngleRef.current);
-//       }
-
-//       // pause at extremes
-//       if (elbowAngleRef.current >= maxAngle) {
-//         elbowAngleRef.current = maxAngle;
-//         directionRef.current = -1;
-//         setTimeout(stepAngle, pauseDuration);
-//         return;
-//       }
-
-//       if (elbowAngleRef.current <= minAngle) {
-//         elbowAngleRef.current = minAngle;
-//         directionRef.current = 1;
-//         setTimeout(stepAngle, pauseDuration);
-//         return;
-//       }
-
-//       setTimeout(stepAngle, stepDuration);
-//     }
-
-//     stepAngle();
-//   }, []); // run once
 
 
   // helpers
@@ -258,7 +223,7 @@ function analyzeForm(results) {
 
   // Knee bend angle 
   const kneeAngle = angleBetween(hip, knee, ankle);
-  setLastElbowAngle(kneeAngle); // reuse state but rename later if needed
+  //setLastElbowAngle(kneeAngle); // reuse state but rename later if needed
 
   // Torso lean angle (shoulder–hip vertical)
   const torsoLean = Math.abs((side === "right" ? RS.y : LS.y) - hip.y);
@@ -299,23 +264,63 @@ function analyzeForm(results) {
   if (hipBelowKnee && kneeAngle <= 110) {
     feedback = "Great depth — stay stable!";
   }
-  const kneeValgusLimit = 0.15; // adjust based on pose scale
+// --- Outward tracking ---
+let kneeOutward = 0;
 
-const kneeValid = kneeValgus <= kneeValgusLimit;
+if (side === "right") {
+  kneeOutward = knee.x - hip.x;       // right = outward is right
+} else {
+  kneeOutward = hip.x - knee.x;       // left = outward is left
+}
+
+const needsMoreOutward = kneeOutward < 0.03;
+
+
+// --- Inward collapse (valgus) ---
+let kneeInward = 0;
+
+if (side === "right") {
+  kneeInward = hip.x - knee.x;        // inward = toward midline
+} else {
+  //kneeInward = knee.x - hip.x;
+}
+
+// hip–knee–ankle angle (valgus detection)
+const valgusAngle = angleBetween(hip, knee, ankle);
+
+const hasValgus =
+  kneeInward < 0.03;
+  
+
+
+// --- FEEDBACK PRIORITY ---
+if (hasValgus) {
+  setformWrong(true);
+  setFeedback("Knees collapsing inward — push knees outward.");
+  return;
+}
+
+// if (needsMoreOutward) {
+//   setformWrong(true);
+//   setFeedback("Push knees slightly outward to track over toes.");
+//   return;
+// }
+
+// GOOD
+setformWrong(false);
 
   // ----------------------------
   // SQUAT PHASE / REP COUNTER
   // ----------------------------
 
-  
 
-if ( kneeAngle < downThreshold && kneeValid) {
-    setStage("down");
+if ( kneeAngle < downThreshold ) {
+    setStage("up");
 }
 
 // Trigger UP only if previously DOWN and knees are valid
-if ( kneeAngle > upThreshold && kneeValid) {
-    setStage("up");
+if ( kneeAngle > upThreshold ) {
+    setStage("down");
     // setRepCount(r => r + 1); // count 1 rep
 }
 
@@ -481,15 +486,17 @@ if ( kneeAngle > upThreshold && kneeValid) {
   <div className="relative bg-black rounded-lg overflow-hidden">
 
   {/* Video */}
+  <div className={`video-wrapper ${formWrong ? "video-wrong" : "video-good"}`}>
   <video
-  ref={videoRef}
-  className="w-full h-auto object-cover"
-  playsInline
-  muted
-  style={{
-    transform: facingMode === "user" ? "scaleX(-1)" : "scaleX(1)",
-  }}
-/>
+    ref={videoRef}
+    className="w-full h-auto object-cover"
+    playsInline
+    muted
+    style={{
+      transform: facingMode === "user" ? "scaleX(-1)" : "scaleX(1)",
+    }}
+  />
+</div>
 
   {/* Canvas */}
   <canvas
@@ -515,28 +522,35 @@ if ( kneeAngle > upThreshold && kneeValid) {
     ">
       
       {/* LEFT */}
-      <div className="flex flex-col gap-1 text-left">
+      {/* <div className="flex flex-col gap-1 text-left">
         <p className="opacity-80">Camera: <span className="font-semibold opacity-100">{facingMode === 'user' ? 'Front' : 'Back'}</span></p>
         <p className="opacity-80">Arm: <span className="font-semibold opacity-100">{armSide}</span></p>
-      </div>
+      </div> */}
 
       {/* CENTER */}
-      <div className="text-center flex flex-col">
-        <p className="text-lg font-bold">{stage}</p>
-        <p className="text-xs opacity-80">
-          {lastElbowAngle ? Math.round(lastElbowAngle) + "°" : "—"}
-        </p>
-      </div>
-<div className="absolute mt-30 left-0 w-full flex justify-center">
+        <div className="text-center flex flex-col">
+<p className="text-6xl font-bold transition-all duration-300">
+  {showTick 
+    ? <span className="text-green-400">✔</span>
+    : stage === "up"
+      ? "⬆ UP"
+      : stage === "down"
+        ? "⬇ DOWN"
+        : "—"}
+</p>
+
+  
+</div>
+{/* <div className="absolute mt-30 left-0 w-full flex justify-center">
     <div className="bg-black/50 backdrop-blur-md text-white text-lg px-5 py-2 rounded-lg">
       {feedback || "Perfect form!"}
     </div>
   </div>
       {/* RIGHT */}
-      <div className="flex flex-col text-right">
+      {/* <div className="flex flex-col text-right">
         <p className="text-lg font-bold text-green-400">{repCount}</p>
         <p className="text-xs opacity-80">Reps</p>
-      </div>
+      </div>  */}
 
     </div>
   </div>

@@ -245,16 +245,12 @@ function checkForm(lm) {
   const dy = shoulder.y - elbow.y;
   const elbowAngle = Math.atan2(dy, dx) * (180 / Math.PI); // 90 = straight up
 
-  if (Math.abs(90 - elbowAngle) > 15) formWrong = true;
+  if (Math.abs(90 - elbowAngle) > 20) formWrong = true;
 
   // ---------------------------------------
   // 3️⃣ Wrist too low (checked only if visible)
   // ---------------------------------------
-  const wristVisible = wrist.visibility > 0.5;
-  if (wristVisible) {
-    const isWristTooLow = wrist.y > elbow.y + 0.02;
-    if (isWristTooLow) formWrong = true;
-  }
+
 
   return formWrong;
 }
@@ -332,7 +328,7 @@ setformWrong(formWrongIs);
 const extendThreshold = 150;
 
 if (elbowAngle < bendThreshold) {
-  if (formOK) feedback = "Starting position — keep elbow tucked.";
+feedback = "Starting position — keep elbow tucked.";
   setStage("up");
 }
 
