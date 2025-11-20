@@ -442,7 +442,65 @@ function drawLandmarks(ctx, results) {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-4 flex flex-col items-center">
       <div className="w-full max-w-4xl bg-slate-700/30 rounded-2xl p-4 shadow-lg">
         <h2 className="text-2xl font-semibold mb-2">Bicep Curl Form Corrector</h2>
-        <p className="text-sm text-slate-200/80 mb-4">Choose camera, get live form feedback and rep counting using MediaPipe Pose.</p>
+<p className="text-sm text-slate-200/80 mb-4">
+  Stand sideways and ensure your full arm is visible for accurate bicep curl tracking.
+</p>
+<div className="flex flex-col items-center justify-center mt-4">
+  <h3 className="text-lg font-medium mb-2">Demo Animation</h3>
+
+  <div className="w-40 h-40 flex items-center justify-center">
+    <svg
+      viewBox="0 0 200 200"
+      className="w-40 h-32"
+    >
+      {/* Upper arm (mirrored to left side) */}
+      <line
+        x1="60"
+        y1="50"
+        x2="60"
+        y2="130"
+        stroke="white"
+        strokeWidth="14"
+        strokeLinecap="round"
+      />
+
+      {/* Forearm — rotates around elbow (mirrored) */}
+      <g className="[transform-origin:60px_130px] animate-curl">
+        {/* Forearm starts downward and curls upward toward shoulder */}
+        <line
+          x1="60"
+          y1="130"
+          x2="60"
+          y2="190"
+          stroke="white"
+          strokeWidth="14"
+          strokeLinecap="round"
+        />
+        <circle cx="60" cy="190" r="12" fill="white" />
+      </g>
+
+      <style>
+        {`
+          /*
+            0%   = fully extended down
+            50%  = fully curled to shoulder (mirrored direction)
+            100% = back to down
+          */
+          @keyframes curl {
+            0%   { transform: rotate(0deg); }
+            50%  { transform: rotate(150deg); }  /* MIRRORED curl */
+            100% { transform: rotate(0deg); }
+          }
+
+          .animate-curl {
+            animation: curl 3s ease-in-out infinite;
+          }
+        `}
+      </style>
+    </svg>
+  </div>
+</div>
+
 
         <div className="flex gap-3 mb-4">
           <button
@@ -455,45 +513,7 @@ function drawLandmarks(ctx, results) {
             className={`px-3 py-2 rounded-md font-medium ${facingMode === "environment" ? "bg-indigo-500" : "bg-slate-600/40"}`}>
             Back Camera
           </button>
-          <button
-            onClick={async () => {
-              // toggle running
-              try {
-                if (cameraRef.current) {
-                  await cameraRef.current.stop();
-                  cameraRef.current = null;
-                  setRunning(false);
-                } else {
-                  // start with current facingMode
-                  const cam = new Camera(videoRef.current, {
-                    onFrame: async () => {
-                      if (!poseRef.current) return;
-                      await poseRef.current.send({ image: videoRef.current });
-                    },
-                    facingMode,
-                    width: 1280,
-                    height: 720,
-                  });
-                  await cam.start();
-                  cameraRef.current = cam;
-                  setRunning(true);
-                }
-              } catch (err) {
-                console.error(err);
-              }
-            }}
-            className="px-3 py-2 rounded-md font-medium bg-emerald-500/80">
-            Toggle Camera
-          </button>
-          <button
-            onClick={() => {
-              setRepCount(0);
-              setStage("down");
-              setFeedback("Stand so your full arm is visible to the camera.");
-            }}
-            className="px-3 py-2 rounded-md font-medium bg-yellow-500/80">
-            Reset
-          </button>
+         
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -593,7 +613,7 @@ function drawLandmarks(ctx, results) {
 
             <div className="bg-slate-700/40 rounded-lg p-3">
               <h3 className="font-medium">Notes</h3>
-              <p className="text-xs mt-1">This is a lightweight, heuristic-based trainer. For clinical or professional training, combine with expert coaching.</p>
+              <p className="text-xs mt-1">This is a lightweight, heuristic-based AI trainer. For clinical or professional training, combine with expert coaching.</p>
             </div>
         
         </div>

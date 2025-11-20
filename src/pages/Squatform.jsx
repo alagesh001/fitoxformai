@@ -28,7 +28,7 @@ export default function SquatFormCorrector() {
   const [running, setRunning] = useState(false);
   const [repCount, setRepCount] = useState(0);
   const [stage, setStage] = useState("down"); // 'down' or 'up'
-  const [feedback, setFeedback] = useState("Stand so your full leg is visible to the camera.");
+  const [feedback, setFeedback] = useState("Stand so your full body is visible to the camera.");
   const [lastElbowAngle, setLastElbowAngle] = useState(null);
   const [armSide, setArmSide] = useState("right"); // 'left' or 'right' - autopreview
 
@@ -428,9 +428,64 @@ if ( kneeAngle > upThreshold ) {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-4 flex flex-col items-center">
       <div className="w-full max-w-4xl bg-slate-700/30 rounded-2xl p-4 shadow-lg">
         <h2 className="text-2xl font-semibold mb-2">Squats Form Corrector</h2>
-        <p className="text-sm text-slate-200/80 mb-4">Choose camera, get live form feedback and rep counting using MediaPipe Pose.</p>
+<p className="text-sm text-slate-200/80 mb-4">
+  Stand facing the camera with your full body visible from head to ankles for accurate squat tracking.
+</p>
+<div className="w-full flex justify-center mt-6">
+  <svg 
+    width="140" 
+    height="260" 
+    viewBox="0 0 140 260"
+  >
+    {/* Head */}
+    <circle cx="70" cy="40" r="25" stroke="white" strokeWidth="6" fill="none" />
 
-        <div className="flex gap-3 mb-4">
+    {/* Torso */}
+    <line 
+      x1="70" y1="70" 
+      x2="70" y2="140" 
+      stroke="white" strokeWidth="8"
+    />
+
+    {/* Arms */}
+    <line 
+      x1="70" y1="90" 
+      x2="40" y2="130" 
+      stroke="white" strokeWidth="8"
+    />
+    <line 
+      x1="70" y1="90" 
+      x2="100" y2="130" 
+      stroke="white" strokeWidth="8"
+    />
+
+    {/* Legs (squat position) */}
+    <line 
+      x1="70" y1="140" 
+      x2="40" y2="200" 
+      stroke="white" strokeWidth="10"
+    />
+    <line 
+      x1="70" y1="140" 
+      x2="100" y2="200" 
+      stroke="white" strokeWidth="10"
+    />
+
+    {/* Shins */}
+    <line 
+      x1="40" y1="200" 
+      x2="40" y2="250" 
+      stroke="white" strokeWidth="10"
+    />
+    <line 
+      x1="100" y1="200" 
+      x2="100" y2="250" 
+      stroke="white" strokeWidth="10"
+    />
+  </svg>
+</div>
+
+        <div className="flex gap-3 mb-4 mt-5">
           <button
             onClick={() => setFacingMode("user")}
             className={`px-3 py-2 rounded-md font-medium ${facingMode === "user" ? "bg-indigo-500" : "bg-slate-600/40"}`}>
@@ -441,45 +496,7 @@ if ( kneeAngle > upThreshold ) {
             className={`px-3 py-2 rounded-md font-medium ${facingMode === "environment" ? "bg-indigo-500" : "bg-slate-600/40"}`}>
             Back Camera
           </button>
-          <button
-            onClick={async () => {
-              // toggle running
-              try {
-                if (cameraRef.current) {
-                  await cameraRef.current.stop();
-                  cameraRef.current = null;
-                  setRunning(false);
-                } else {
-                  // start with current facingMode
-                  const cam = new Camera(videoRef.current, {
-                    onFrame: async () => {
-                      if (!poseRef.current) return;
-                      await poseRef.current.send({ image: videoRef.current });
-                    },
-                    facingMode,
-                    width: 1280,
-                    height: 720,
-                  });
-                  await cam.start();
-                  cameraRef.current = cam;
-                  setRunning(true);
-                }
-              } catch (err) {
-                console.error(err);
-              }
-            }}
-            className="px-3 py-2 rounded-md font-medium bg-emerald-500/80">
-            Toggle Camera
-          </button>
-          <button
-            onClick={() => {
-              setRepCount(0);
-              setStage("down");
-              setFeedback("Stand so your full arm is visible to the camera.");
-            }}
-            className="px-3 py-2 rounded-md font-medium bg-yellow-500/80">
-            Reset
-          </button>
+         
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -568,20 +585,21 @@ if ( kneeAngle > upThreshold ) {
 
             <div className="bg-slate-700/40 rounded-lg p-3 flex-1">
 
-              <div className="mt-4">
-                <h4 className="font-medium">Form tips</h4>
-                <ul className="list-disc list-inside text-sm mt-1">
-                  <li>Keep elbow close to your torso; avoid swinging the shoulder.</li>
-                  <li>Move with a controlled tempo—avoid momentum.</li>
-                  <li>Keep wrist neutral; don’t curl wrist towards forearm.</li>
-                  <li>Use side profile for more accurate arm tracking when possible.</li>
-                </ul>
-              </div>
+             <div className="mt-4">
+  <h4 className="font-medium">Squat Form Tips</h4>
+  <ul className="list-disc list-inside text-sm mt-1">
+    <li>Keep chest up and torso upright; avoid leaning forward.</li>
+    <li>Push your knees slightly outward; track them over your toes.</li>
+    <li>Maintain your weight on your heels, not your toes.</li>
+    <li>Squat to a comfortable depth where hips go below knees if possible.</li>
+    <li>Use a front profile for accurate tracking of knees and foot alignment.</li>
+  </ul>
+</div>
             </div>
 
             <div className="bg-slate-700/40 rounded-lg p-3">
               <h3 className="font-medium">Notes</h3>
-              <p className="text-xs mt-1">This is a lightweight, heuristic-based trainer. For clinical or professional training, combine with expert coaching.</p>
+              <p className="text-xs mt-1">This is a lightweight, heuristic-based AI trainer. For clinical or professional training, combine with expert coaching.</p>
             </div>
         
         </div>

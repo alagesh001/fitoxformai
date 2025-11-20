@@ -28,10 +28,13 @@ export default function BicepCurlFormCorrector() {
   const [running, setRunning] = useState(false);
   const [repCount, setRepCount] = useState(0);
   const [stage, setStage] = useState("up"); // 'down' or 'up'
-  const [feedback, setFeedback] = useState("Stand so your full arm is visible to the camera.");
+  const [feedback, setFeedback] = useState("Both your shoulders should be visible to the camera.");
   const [lastElbowAngle, setLastElbowAngle] = useState(null);
   const [armSide, setArmSide] = useState("right"); // 'left' or 'right' - autopreview
+  const [formWrong, setformWrong] = useState(false); // 'left' or 'right' - autopreview
 
+
+const [showTick, setShowTick] = useState(false);
 
 
   const elbowAngleRef = useRef(40);
@@ -55,10 +58,12 @@ export default function BicepCurlFormCorrector() {
 
   // Increment reps on stage change to "down"
   useEffect(() => {
-    if (stage === "down") {
-      setRepCount((r) => r + 1);
-      console.log("Stage DOWN, rep counted:", repCount + 1);
-    }
+  //    if (!stage) return;
+
+  //     setShowTick(true);
+  // const timer = setTimeout(() => setShowTick(false), 400);
+  //   return () => clearTimeout(timer);
+   
   }, [stage]);
 
 //   useEffect(() => {
@@ -231,106 +236,89 @@ function analyzeForm(results) {
   const lm = results?.poseLandmarks;
   if (!lm) return;
 
+  // ----------------------------
   // Landmarks
+  // ----------------------------
   const RS = lm[11], RE = lm[13], RW = lm[15];
   const LS = lm[12], LE = lm[14], LW = lm[16];
+  const RH = lm[24], LH = lm[23];
 
   const rightVis = Math.min(RS?.visibility ?? 0, RE?.visibility ?? 0, RW?.visibility ?? 0);
-  const leftVis  = Math.min(LS?.visibility ?? 0, LE?.visibility ?? 0, LW?.visibility ?? 0);
+  const leftVis = Math.min(LS?.visibility ?? 0, LE?.visibility ?? 0, LW?.visibility ?? 0);
 
   const side = rightVis > leftVis ? "right" : "left";
-  setArmSide(side);
 
   const shoulder = side === "right" ? RS : LS;
-  const elbow    = side === "right" ? RE : LE;
-  const wrist    = side === "right" ? RW : LW;
+  const elbow = side === "right" ? RE : LE;
+  const wrist = side === "right" ? RW : LW;
+  const hip = side === "right" ? RH : LH;
 
-  if (!shoulder || !elbow || !wrist) return;
+  if (!shoulder || !elbow || !wrist || !hip) return;
 
-  // MAIN SHOULDER PRESS ANGLE (shoulder → elbow → wrist)
-  const elbowAngle = angleBetween(shoulder, elbow, wrist);
+  // ----------------------------
+  // Horizontal check: elbow never behind shoulder
+  // ----------------------------
+  const elbowDir = side === "right" ? 1 : -1; // pressing direction
+  const elbowOffset = (elbow.x - shoulder.x) * elbowDir;
 
-  // ============================
-  //        FORM CHECKS
-  // ============================
+  if (elbowOffset > 0) {
+    setformWrong(true);
+    setFeedback("Elbow should never be behind the shoulder.");
+    return;
+  }
+
+  // ----------------------------
+  // Angles
+  // ----------------------------
+  const elbowAngle = angleBetween(shoulder, elbow, wrist); // elbow bend
+  const shoulderElbowHipAngle = angleBetween(hip, shoulder, elbow); // torso-arm alignment
+  const wristAboveShoulder = wrist.y < shoulder.y - 0.02;
+  const elbowAbove = elbow.y < shoulder.y - 0.02;
+  const elbowBelow = elbow.y > shoulder.y + 0.02;
+
+  // ----------------------------
+  // Form checks
+  // ----------------------------
   let feedback = "Good form — keep going.";
+  let wrong = false;
+const stageString = `
+Elbow Angle: ${elbowAngle.toFixed(1)}°
+Wrist Above Shoulder: ${wristAboveShoulder ? "✅" : "❌"}
+Shoulder-Elbow-Hip Angle: ${shoulderElbowHipAngle.toFixed(1)}°
+`;
 
-  // 1️⃣ Torso should be upright (shoulders level)
-  const torsoTilt = Math.abs(RS?.y - LS?.y);
-  if (torsoTilt > 0.18) {
-    feedback = "Keep torso upright — avoid leaning to one side.";
+// Set it in your state
+setStage(stageString);
+  if (elbowAbove) {
+    // Arm straight overhead
+    if (shoulderElbowHipAngle < 150 || !wristAboveShoulder) {
+      feedback = "Keep elbow and wrist straight — arm fully overhead.";
+      wrong = true;
+        setformWrong(true);
+
+        return;
+    }
+  } else if (elbowBelow) {
+    if (elbowAngle <= 70 || !wristAboveShoulder) {
+      feedback = "Elbow bent too much or wrist too low — maintain form.";
+      wrong = true;
+      return;
+    }
   }
-
-  // 2️⃣ Wrists must be above elbows (vertical pressing path)
-  if (wrist.y > elbow.y + 0.05) {
-    feedback = "Lift wrist upward — push in a straight line.";
-  }
-
-  // 3️⃣ Elbows should NOT flare too wide (X distance from shoulder)
-
-
-  // 4️⃣ Wrist should stay aligned (not too far forward/back)
-  const wristXDiff = Math.abs(wrist.x - elbow.x);
-  if (wristXDiff > 0.25) {
-    feedback = "Keep wrist stacked above elbow — avoid bending.";
-  }
-    // 5️⃣ Elbow angle rules
-// --- Angle thresholds ---
-
-
-// --- Vertical position ---
-const elbowAbove = elbow.y < shoulder.y - 0.03;
-const elbowBelow = elbow.y > shoulder.y + 0.03;
-
-// --- Current elbow–shoulder distance ---
-const wristShoulderDist = Math.hypot(
-  wrist.x - shoulder.x,
-  wrist.y - shoulder.y
-);
-
-const elbowShoulderDist = Math.hypot(
-  elbow.x - shoulder.x,
-  elbow.y - shoulder.y
-);
-// Height check
-
-// Distance check
-const farFromShoulder = wristShoulderDist > elbowShoulderDist * 1.25;  
-const closeToShoulder = wristShoulderDist < elbowShoulderDist * 0.90; 
-
-// Angle check (extra stability)
-const extendedAngle = elbowAngle > 145;   // arm straight overhead
-const bentAngle = elbowAngle > 60 && elbowAngle < 115;      
-  const elbowSideSpread = Math.abs(elbow.x - shoulder.x);
-  if (!closeToShoulder && bentAngle && elbowBelow ) {
-    feedback = "Don’t flare elbows — keep them slightly in front.";
-  }
-   if (closeToShoulder && !bentAngle && elbowBelow ) {
-    feedback = "Keep your wrist straight.";
-  }
-setLastElbowAngle(elbowAngle);
-  
-// --- Final position checks ---
-const isUp = extendedAngle && elbowAbove;
-
-const isDown =
-  bentAngle &&
-  elbowBelow && closeToShoulder;    // must tuck in, not just bend
-
-
-
-// --- Rep Counting ---
-if ( isUp) {
-  setStage("down");
+if ( elbowBelow ) {
+    //setStage("up");
 }
-
-if ( isDown) {
-  setStage("up");
+// Trigger UP only if previously DOWN and knees are valid
+if ( !elbowBelow && elbowAngle > 160) {
+    //setStage("down");
+    // setRepCount(r => r + 1); // count 1 rep
 }
-
+  setformWrong(false);
 
   setFeedback(feedback);
 }
+
+
 
 
   useEffect(() => {
@@ -490,15 +478,17 @@ if ( isDown) {
   <div className="relative bg-black rounded-lg overflow-hidden">
 
   {/* Video */}
+   <div className={`video-wrapper ${formWrong ? "video-wrong" : "video-good"}`}>
   <video
-  ref={videoRef}
-  className="w-full h-auto object-cover"
-  playsInline
-  muted
-  style={{
-    transform: facingMode === "user" ? "scaleX(-1)" : "scaleX(1)",
-  }}
-/>
+    ref={videoRef}
+    className="w-full h-auto object-cover"
+    playsInline
+    muted
+    style={{
+      transform: facingMode === "user" ? "scaleX(-1)" : "scaleX(1)",
+    }}
+  />
+</div>
 
   {/* Canvas */}
   <canvas
@@ -524,28 +514,36 @@ if ( isDown) {
     ">
       
       {/* LEFT */}
-      <div className="flex flex-col gap-1 text-left">
+      {/* <div className="flex flex-col gap-1 text-left">
         <p className="opacity-80">Camera: <span className="font-semibold opacity-100">{facingMode === 'user' ? 'Front' : 'Back'}</span></p>
         <p className="opacity-80">Arm: <span className="font-semibold opacity-100">{armSide}</span></p>
-      </div>
+      </div> */}
 
       {/* CENTER */}
-      <div className="text-center flex flex-col">
-        <p className="text-lg font-bold">{stage}</p>
-        <p className="text-xs opacity-80">
-          {lastElbowAngle ? Math.round(lastElbowAngle) + "°" : "—"}
-        </p>
-      </div>
-<div className="absolute mt-30 left-0 w-full flex justify-center">
+       <div className="text-center flex flex-col">
+<p className="text-lg font-bold transition-all duration-300">
+  {showTick 
+    ? <span className="text-green-400">✔</span>
+    : stage === "up"
+      ? "⬆ UP"
+      : stage === "down"
+        ? "⬇ DOWN"
+        : stage
+  }
+</p>
+
+  
+</div>
+{/* <div className="absolute mt-30 left-0 w-full flex justify-center">
     <div className="bg-black/50 backdrop-blur-md text-white text-lg px-5 py-2 rounded-lg">
       {feedback || "Perfect form!"}
     </div>
   </div>
       {/* RIGHT */}
-      <div className="flex flex-col text-right">
+      {/* <div className="flex flex-col text-right">
         <p className="text-lg font-bold text-green-400">{repCount}</p>
         <p className="text-xs opacity-80">Reps</p>
-      </div>
+      </div> */} 
 
     </div>
   </div>

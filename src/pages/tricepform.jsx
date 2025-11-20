@@ -448,7 +448,67 @@ if (elbowAngle > extendThreshold) {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-4 flex flex-col items-center">
       <div className="w-full max-w-4xl bg-slate-700/30 rounded-2xl p-4 shadow-lg">
         <h2 className="text-2xl font-semibold mb-2">Tricep Curl Form Corrector</h2>
-        <p className="text-sm text-slate-200/80 mb-4">Choose camera, get live form feedback and rep counting using MediaPipe Pose.</p>
+<p className="text-sm text-slate-200/80 mb-4">
+  Stand facing the camera with both arms clearly visible for accurate tricep curl tracking.
+</p>
+<div className="flex flex-col items-center justify-center mt-4">
+  <h3 className="text-lg font-medium mb-2">Tricep Curl – Front View</h3>
+
+  <div className="w-40 h-48 flex items-center justify-center">
+    <svg
+      viewBox="0 0 200 240"
+      className="w-32 h-40"
+    >
+      {/* Shoulder */}
+      <circle cx="100" cy="60" r="22" fill="white" />
+
+      {/* Upper arm */}
+      <line
+        x1="100"
+        y1="82"
+        x2="100"
+        y2="150"
+        stroke="white"
+        strokeWidth="14"
+        strokeLinecap="round"
+      />
+
+      {/* Forearm (pushes down) */}
+      <g className="[transform-origin:100px_150px] animate-tricep">
+        <line
+          x1="100"
+          y1="150"
+          x2="100"
+          y2="210"   /* straight down */
+          stroke="white"
+          strokeWidth="14"
+          strokeLinecap="round"
+        />
+        <circle cx="100" cy="210" r="12" fill="white" />
+      </g>
+
+      <style>
+        {`
+          /*
+            Front-view cable pushdown:
+            0%   = forearm up at ~90°
+            50%  = fully extended down
+            100% = back up
+          */
+          @keyframes tricep {
+            0%   { transform: rotate(-60deg); }   /* bent upward */
+            50%  { transform: rotate(0deg); }     /* fully straight */
+            100% { transform: rotate(-60deg); }
+          }
+
+          .animate-tricep {
+            animation: tricep 1.8s ease-in-out infinite;
+          }
+        `}
+      </style>
+    </svg>
+  </div>
+</div>
 
         <div className="flex gap-3 mb-4">
           <button
@@ -461,45 +521,7 @@ if (elbowAngle > extendThreshold) {
             className={`px-3 py-2 rounded-md font-medium ${facingMode === "environment" ? "bg-indigo-500" : "bg-slate-600/40"}`}>
             Back Camera
           </button>
-          <button
-            onClick={async () => {
-              // toggle running
-              try {
-                if (cameraRef.current) {
-                  await cameraRef.current.stop();
-                  cameraRef.current = null;
-                  setRunning(false);
-                } else {
-                  // start with current facingMode
-                  const cam = new Camera(videoRef.current, {
-                    onFrame: async () => {
-                      if (!poseRef.current) return;
-                      await poseRef.current.send({ image: videoRef.current });
-                    },
-                    facingMode,
-                    width: 1280,
-                    height: 720,
-                  });
-                  await cam.start();
-                  cameraRef.current = cam;
-                  setRunning(true);
-                }
-              } catch (err) {
-                console.error(err);
-              }
-            }}
-            className="px-3 py-2 rounded-md font-medium bg-emerald-500/80">
-            Toggle Camera
-          </button>
-          <button
-            onClick={() => {
-              setRepCount(0);
-              setStage("down");
-              setFeedback("Stand so your full arm is visible to the camera.");
-            }}
-            className="px-3 py-2 rounded-md font-medium bg-yellow-500/80">
-            Reset
-          </button>
+     
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -589,19 +611,20 @@ if (elbowAngle > extendThreshold) {
             <div className="bg-slate-700/40 rounded-lg p-3 flex-1">
 
               <div className="mt-4">
-                <h4 className="font-medium">Form tips</h4>
-                <ul className="list-disc list-inside text-sm mt-1">
-                  <li>Keep elbow close to your torso; avoid swinging the shoulder.</li>
-                  <li>Move with a controlled tempo—avoid momentum.</li>
-                  <li>Keep wrist neutral; don’t curl wrist towards forearm.</li>
-                  <li>Use side profile for more accurate arm tracking when possible.</li>
-                </ul>
-              </div>
+  <h4 className="font-medium">Tricep Curl Form Tips (Front Profile)</h4>
+  <ul className="list-disc list-inside text-sm mt-1">
+    <li>Keep elbows tucked close to your torso; avoid letting them drift forward or outward.</li>
+    <li>Move your forearms in a controlled arc; avoid swinging the weights.</li>
+    <li>Keep wrists straight and neutral; don’t bend or twist them during the curl.</li>
+    <li>Engage your core and maintain a stable stance.</li>
+    <li>Use the front profile to monitor symmetry and ensure elbows stay in place.</li>
+  </ul>
+</div>
             </div>
 
             <div className="bg-slate-700/40 rounded-lg p-3">
               <h3 className="font-medium">Notes</h3>
-              <p className="text-xs mt-1">This is a lightweight, heuristic-based trainer. For clinical or professional training, combine with expert coaching.</p>
+              <p className="text-xs mt-1">This is a lightweight, heuristic-based AI trainer. For clinical or professional training, combine with expert coaching.</p>
             </div>
         
         </div>

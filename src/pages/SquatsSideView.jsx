@@ -32,6 +32,8 @@ export default function SquatSideFormCorrector() {
   const [lastElbowAngle, setLastElbowAngle] = useState(null);
   const [armSide, setArmSide] = useState("right"); // 'left' or 'right' - autopreview
 
+ const [formWrong, setformWrong] = useState(false); // 'left' or 'right' - autopreview
+const [showTick, setShowTick] = useState(false);
 
 
   const elbowAngleRef = useRef(40);
@@ -55,10 +57,11 @@ export default function SquatSideFormCorrector() {
 
   // Increment reps on stage change to "down"
   useEffect(() => {
-    if (stage === "up") {
-      setRepCount((r) => r + 1);
-      console.log("Stage DOWN, rep counted:", repCount + 1);
-    }
+  //    if (!stage) return;
+
+  //     setShowTick(true);
+  // const timer = setTimeout(() => setShowTick(false), 400);
+  //   return () => clearTimeout(timer);
   }, [stage]);
 
 //   useEffect(() => {
@@ -281,29 +284,34 @@ function analyzeForm(results) {
   // PHASE / REP LOGIC (STATE MACHINE)
   // ----------------------------
   const downThresholdKnee = 110;  // bottom of squat (~thigh parallel)
-  const upThresholdKnee = 160;    // standing up
-  const downTorsoMin = 50;        // torso-thigh angle at bottom
+  const upThresholdKnee = 140;    // standing up
+  const downTorsoMin = 30;        // torso-thigh angle at bottom
   const downTorsoMax = 60;
+  setStage(String(kneeAngle));
 
+if(kneeAngle < 130 && (torsoAngle>downTorsoMax || torsoAngle<downTorsoMin || kneeAngle<90)){
+  setformWrong(true);
+  return;
+}
   // Trigger DOWN only if previously UP
   if (
       kneeAngle <= downThresholdKnee &&
       torsoAngle >= downTorsoMin &&
       torsoAngle <= downTorsoMax) {
-    setStage("up");
+   // setStage("up");
   }
 
   // Trigger UP only if previously DOWN
   if ( kneeAngle > upThresholdKnee) {
-    setStage("down");
+ //  setStage("down");
     // setRepCount(r => r + 1); // increment rep
     feedback = "Good rep — nice lockout!";
   }
-
+setformWrong(false);
   // ----------------------------
   // STATE UPDATES
   // ----------------------------
-  setLastElbowAngle(kneeAngle); // reuse for angle visualization
+ // setLastElbowAngle(kneeAngle); // reuse for angle visualization
   setFeedback(feedback);
 }
 
@@ -467,15 +475,17 @@ function analyzeForm(results) {
   <div className="relative bg-black rounded-lg overflow-hidden">
 
   {/* Video */}
+  <div className={`video-wrapper ${formWrong ? "video-wrong" : "video-good"}`}>
   <video
-  ref={videoRef}
-  className="w-full h-auto object-cover"
-  playsInline
-  muted
-  style={{
-    transform: facingMode === "user" ? "scaleX(-1)" : "scaleX(1)",
-  }}
-/>
+    ref={videoRef}
+    className="w-full h-auto object-cover"
+    playsInline
+    muted
+    style={{
+      transform: facingMode === "user" ? "scaleX(-1)" : "scaleX(1)",
+    }}
+  />
+</div>
 
   {/* Canvas */}
   <canvas
@@ -501,28 +511,34 @@ function analyzeForm(results) {
     ">
       
       {/* LEFT */}
-      <div className="flex flex-col gap-1 text-left">
+      {/* <div className="flex flex-col gap-1 text-left">
         <p className="opacity-80">Camera: <span className="font-semibold opacity-100">{facingMode === 'user' ? 'Front' : 'Back'}</span></p>
         <p className="opacity-80">Arm: <span className="font-semibold opacity-100">{armSide}</span></p>
-      </div>
+      </div> */}
 
       {/* CENTER */}
-      <div className="text-center flex flex-col">
-        <p className="text-lg font-bold">{stage}</p>
-        <p className="text-xs opacity-80">
-          {lastElbowAngle ? Math.round(lastElbowAngle) + "°" : "—"}
-        </p>
-      </div>
-<div className="absolute mt-30 left-0 w-full flex justify-center">
+        <div className="text-center flex flex-col">
+<p className="text-6xl font-bold transition-all duration-300">
+  {showTick 
+    ? <span className="text-green-400">✔</span>
+    : stage === "up"
+      ? "⬆ UP"
+      : stage === "down"
+        ? "⬇ DOWN"
+        : stage}
+
+</p>  
+ </div>
+{/* <div className="absolute mt-30 left-0 w-full flex justify-center">
     <div className="bg-black/50 backdrop-blur-md text-white text-lg px-5 py-2 rounded-lg">
       {feedback || "Perfect form!"}
     </div>
   </div>
       {/* RIGHT */}
-      <div className="flex flex-col text-right">
+      {/* <div className="flex flex-col text-right">
         <p className="text-lg font-bold text-green-400">{repCount}</p>
         <p className="text-xs opacity-80">Reps</p>
-      </div>
+      </div> */} 
 
     </div>
   </div>
